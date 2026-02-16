@@ -1,5 +1,3 @@
-import { signInWithPopup } from 'firebase/auth';
-import { auth, googleProvider } from '../config/firebase';
 import useAuthStore from '../store/useAuthStore';
 import { X } from 'lucide-react';
 
@@ -27,15 +25,15 @@ export default function LoginSheet({ isOpen, onClose }) {
 
             {/* Sheet */}
             <div className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl shadow-sheet p-6 animate-slide-up">
-                {/* Close button */}
+                {/* Close */}
                 <button
                     onClick={onClose}
-                    className="absolute top-4 right-4 p-2 text-brand-muted hover:text-brand-dark transition-colors cursor-pointer"
+                    className="absolute top-4 right-4 p-2 text-brand-muted hover:text-brand-dark transition-colors"
                 >
                     <X size={20} />
                 </button>
 
-                {/* Content */}
+                {/* Branding */}
                 <div className="text-center mb-6">
                     <div className="w-16 h-16 bg-brand-red rounded-full flex items-center justify-center mx-auto mb-4">
                         <span className="text-white font-bold text-2xl">M</span>
@@ -48,15 +46,15 @@ export default function LoginSheet({ isOpen, onClose }) {
                 {error && (
                     <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg mb-4 text-center">
                         {error}
-                        <button onClick={clearError} className="ml-2 underline cursor-pointer">Dismiss</button>
+                        <button onClick={clearError} className="ml-2 underline">Dismiss</button>
                     </div>
                 )}
 
-                {/* Google Sign-In */}
+                {/* Google Sign-In (Primary for now) */}
                 <button
                     onClick={handleGoogleLogin}
                     disabled={loading}
-                    className="w-full bg-white border-2 border-brand-border text-brand-dark font-semibold py-3.5 rounded-lg flex items-center justify-center gap-3 hover:border-brand-red/30 hover:shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                    className="w-full bg-white border-2 border-brand-border text-brand-dark font-semibold py-3.5 rounded-lg flex items-center justify-center gap-3 hover:border-brand-red/30 hover:shadow-sm transition-all disabled:opacity-50"
                 >
                     {loading ? (
                         <div className="w-5 h-5 border-2 border-brand-red border-t-transparent rounded-full animate-spin" />

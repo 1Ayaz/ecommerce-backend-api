@@ -4,27 +4,31 @@ const useCartStore = create((set, get) => ({
     items: JSON.parse(localStorage.getItem('mubarak_cart')) || [],
     storeId: localStorage.getItem('mubarak_storeId') || null,
 
-    // Add item to cart
-    addItem: (product) => {
+    // Add item to cart (from Home or PDP with variant and selectedCut)
+    addItem: (product, variant, selectedCut = '') => {
         const items = get().items;
-        const existing = items.find((i) => i.productId === product._id);
+        const cartKey = `${product._id}_${variant._id}_${selectedCut || 'default'}`;
+        const existing = items.find((i) => i.cartKey === cartKey);
 
         let newItems;
         if (existing) {
             newItems = items.map((i) =>
-                i.productId === product._id ? { ...i, quantity: i.quantity + 1 } : i
+                i.cartKey === cartKey ? { ...i, quantity: i.quantity + 1 } : i
             );
         } else {
             newItems = [
                 ...items,
                 {
+                    cartKey,
                     productId: product._id,
+                    variantId: variant._id,
                     name: product.name,
-                    price: product.price,
+                    price: variant.price,
                     image: product.image,
-                    weightLabel: product.weightLabel,
-                    selectedCut: product.cutOptions?.[0] || '',
+                    weightLabel: variant.weight,
+                    selectedCut,
                     quantity: 1,
+                    storeId: product.storeId,
                 },
             ];
         }
@@ -35,18 +39,18 @@ const useCartStore = create((set, get) => ({
     },
 
     // Remove item (decrease quantity or remove)
-    removeItem: (productId) => {
+    removeItem: (cartKey) => {
         const items = get().items;
-        const existing = items.find((i) => i.productId === productId);
+        const existing = items.find((i) => i.cartKey === cartKey);
 
         if (!existing) return;
 
         let newItems;
         if (existing.quantity === 1) {
-            newItems = items.filter((i) => i.productId !== productId);
+            newItems = items.filter((i) => i.cartKey !== cartKey);
         } else {
             newItems = items.map((i) =>
-                i.productId === productId ? { ...i, quantity: i.quantity - 1 } : i
+                i.cartKey === cartKey ? { ...i, quantity: i.quantity - 1 } : i
             );
         }
 
@@ -55,18 +59,10 @@ const useCartStore = create((set, get) => ({
         set({ items: newItems, storeId: newItems.length > 0 ? get().storeId : null });
     },
 
-    // Update selected cut for an item
-    updateCut: (productId, cut) => {
-        const items = get().items.map((i) =>
-            i.productId === productId ? { ...i, selectedCut: cut } : i
-        );
-        localStorage.setItem('mubarak_cart', JSON.stringify(items));
-        set({ items });
-    },
-
-    // Get item count for a specific product
-    getItemCount: (productId) => {
-        const item = get().items.find((i) => i.productId === productId);
+    // Get item count for a specific variant + cut
+    getItemCount: (productId, variantId, selectedCut = '') => {
+        const cartKey = `${productId}_${variantId}_${selectedCut || 'default'}`;
+        const item = get().items.find((i) => i.cartKey === cartKey);
         return item ? item.quantity : 0;
     },
 

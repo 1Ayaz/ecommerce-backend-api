@@ -3,6 +3,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Header from './components/Header';
 import Home from './pages/Home';
+import ProductDetail from './pages/ProductDetail';
 import Checkout from './pages/Checkout';
 import OrderSuccess from './pages/OrderSuccess';
 
@@ -14,6 +15,7 @@ function App() {
         <main>
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/product/:id" element={<ProductDetail />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/order-success" element={<OrderSuccess />} />
           </Routes>
@@ -22,7 +24,6 @@ function App() {
           position="top-center"
           autoClose={3000}
           hideProgressBar
-          toastClassName="!bg-brand-dark !text-white !rounded-xl !shadow-lg !text-sm !font-medium"
         />
       </div>
     </Router>

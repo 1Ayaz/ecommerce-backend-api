@@ -12,7 +12,7 @@ import LoginSheet from '../components/LoginSheet';
 export default function Home() {
     const navigate = useNavigate();
     const { user } = useAuthStore();
-    const { addItem, removeItem, getItemCount, getTotalCount, getTotalPrice } = useCartStore();
+    const { getTotalCount, getTotalPrice } = useCartStore();
 
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -26,17 +26,13 @@ export default function Home() {
         const fetchData = async () => {
             try {
                 setLoading(true);
-
-                // Get nearby store (using default pincode for dev)
                 const storeRes = await API.get('/stores/nearby?pincode=533101');
                 const storeData = storeRes.data.data;
                 setStore(storeData);
 
-                // Get categories
                 const catRes = await API.get(`/products/categories?storeId=${storeData._id}`);
                 setCategories(catRes.data.data);
 
-                // Get products
                 const prodRes = await API.get(`/products?storeId=${storeData._id}`);
                 setProducts(prodRes.data.data);
             } catch (error) {
@@ -45,14 +41,12 @@ export default function Home() {
                 setLoading(false);
             }
         };
-
         fetchData();
     }, []);
 
     // Filter by category
     useEffect(() => {
         if (!store) return;
-
         const fetchFiltered = async () => {
             try {
                 const url = activeCategory
@@ -64,38 +58,22 @@ export default function Home() {
                 console.error('Filter failed:', error);
             }
         };
-
         fetchFiltered();
     }, [activeCategory, store]);
-
-    const handleAdd = (product) => {
-        if (!user) {
-            setShowLogin(true);
-            return;
-        }
-        addItem(product);
-    };
-
-    const handleRemove = (productId) => {
-        removeItem(productId);
-    };
 
     // Loading skeletons
     if (loading) {
         return (
             <div className="max-w-7xl mx-auto px-4 py-6">
-                {/* Hero skeleton */}
                 <div className="bg-white rounded-2xl p-6 mb-6 animate-pulse">
                     <div className="h-6 bg-gray-200 rounded w-48 mb-3"></div>
                     <div className="h-4 bg-gray-100 rounded w-64"></div>
                 </div>
-                {/* Category skeleton */}
                 <div className="flex gap-3 mb-6">
                     {[1, 2, 3, 4].map((i) => (
                         <div key={i} className="h-10 w-24 bg-gray-200 rounded-full animate-pulse"></div>
                     ))}
                 </div>
-                {/* Product grid skeleton */}
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-6">
                     {[1, 2, 3, 4, 5, 6].map((i) => (
                         <div key={i} className="bg-white rounded-xl p-3 animate-pulse">
@@ -134,7 +112,6 @@ export default function Home() {
                         </div>
                     </div>
                 </div>
-                {/* Decorative circles */}
                 <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full"></div>
                 <div className="absolute -right-4 -bottom-12 w-24 h-24 bg-white/5 rounded-full"></div>
             </div>
@@ -151,7 +128,7 @@ export default function Home() {
                 />
             </div>
 
-            {/* Products Grid */}
+            {/* Products Grid — Cards link to PDP (no quick-add) */}
             {products.length === 0 ? (
                 <div className="text-center py-12 text-brand-muted">
                     <p className="text-lg font-medium mb-2">No products found</p>
@@ -160,13 +137,7 @@ export default function Home() {
             ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-6">
                     {products.map((product) => (
-                        <ProductCard
-                            key={product._id}
-                            product={product}
-                            count={getItemCount(product._id)}
-                            onAdd={() => handleAdd(product)}
-                            onRemove={() => handleRemove(product._id)}
-                        />
+                        <ProductCard key={product._id} product={product} />
                     ))}
                 </div>
             )}

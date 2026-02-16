@@ -7,16 +7,18 @@ const Category = require('../models/Category');
 // @access  Public
 const getProducts = asyncHandler(async (req, res) => {
     const { storeId, categoryId } = req.query;
+    console.log(`[DEBUG] getProducts called - storeId: ${storeId}, categoryId: ${categoryId}`);
 
     if (!storeId) {
         res.status(400);
         throw new Error('storeId is required');
     }
 
-    const filter = { storeId, inStock: true };
+    const filter = { storeId, "variants.inStock": true };
     if (categoryId) filter.categoryId = categoryId;
 
     const products = await Product.find(filter).populate('categoryId', 'name').sort({ name: 1 });
+    console.log(`[DEBUG] getProducts returning ${products.length} products for filter:`, JSON.stringify(filter));
 
     res.status(200).json({ success: true, count: products.length, data: products });
 });

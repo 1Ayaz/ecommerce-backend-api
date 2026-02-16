@@ -1,27 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
-@import "tailwindcss";
-
-/* ============ Mubarak Design Tokens ============ */
-@theme {
-  --color-brand-red: #D10024;
-  --color-brand-dark: #15161D;
-  --color-brand-muted: #8D99AE;
-  --color-brand-bg: #F4F6FB;
-  --color-brand-card: #FFFFFF;
-  --color-brand-border: #E4E7ED;
-  --color-brand-green: #15803d;
-
-  --font-family-sans: 'Poppins', sans-serif;
-
-  --shadow-float: 0 4px 12px rgba(209, 0, 36, 0.3);
-  --shadow-sheet: 0 -4px 20px rgba(0, 0, 0, 0.1);
-}
 
 /* ============ Global Styles ============ */
 body {
   font-family: 'Poppins', sans-serif;
-  background-color: var(--color-brand-bg);
-  color: var(--color-brand-dark);
+  background-color: #F4F6FB;
+  color: #15161D;
   margin: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

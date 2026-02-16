@@ -10,7 +10,21 @@ const firebaseConfig = {
     appId: import.meta.env.VITE_FIREBASE_APP_ID || '',
 };
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
+let app = null;
+let auth = null;
+let googleProvider = null;
+
+if (firebaseConfig.apiKey) {
+    try {
+        app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        googleProvider = new GoogleAuthProvider();
+    } catch (err) {
+        console.warn('Firebase init failed:', err.message);
+    }
+} else {
+    console.warn('⚠️ Firebase API key missing — add VITE_FIREBASE_* vars to client/.env');
+}
+
+export { auth, googleProvider };
 export default app;

@@ -76,62 +76,101 @@ const seedDB = async () => {
         const products = await Product.insertMany([
             {
                 storeId: store._id, categoryId: chickenCat._id,
-                name: 'Curry Cut (Skin)', price: 220, marketPrice: 260,
-                weightLabel: '1 kg', cutOptions: ['Small Pieces', 'Medium Pieces', 'Large Pieces'],
+                name: 'Curry Cut (Skin)',
+                variants: [
+                    { weight: '500 g', price: 120, marketPrice: 140 },
+                    { weight: '1 kg', price: 230, marketPrice: 280, bestValue: true }
+                ],
+                cutOptions: ['Small Pieces', 'Medium Pieces', 'Large Pieces'],
                 image: 'https://res.cloudinary.com/demo/image/upload/v1/curry_cut.jpg', deliveryTime: 18,
             },
             {
                 storeId: store._id, categoryId: chickenCat._id,
-                name: 'Curry Cut (Skinless)', price: 250, marketPrice: 290,
-                weightLabel: '1 kg', cutOptions: ['Small Pieces', 'Medium Pieces'],
+                name: 'Curry Cut (Skinless)',
+                variants: [
+                    { weight: '500 g', price: 140, marketPrice: 160 },
+                    { weight: '1 kg', price: 270, marketPrice: 320, bestValue: true }
+                ],
+                cutOptions: ['Small Pieces', 'Medium Pieces'],
                 image: 'https://res.cloudinary.com/demo/image/upload/v1/curry_cut_skinless.jpg', deliveryTime: 18,
             },
             {
                 storeId: store._id, categoryId: chickenCat._id,
-                name: 'Biryani Cut', price: 240, marketPrice: 280,
-                weightLabel: '1 kg', cutOptions: ['Standard', 'Large'],
+                name: 'Biryani Cut',
+                variants: [
+                    { weight: '500 g', price: 130, marketPrice: 150 },
+                    { weight: '1 kg', price: 250, marketPrice: 300, bestValue: true }
+                ],
+                cutOptions: ['Standard', 'Large'],
                 image: 'https://res.cloudinary.com/demo/image/upload/v1/biryani_cut.jpg', deliveryTime: 20,
             },
             {
                 storeId: store._id, categoryId: chickenCat._id,
-                name: 'Whole Chicken (Cleaned)', price: 200, marketPrice: 240,
-                weightLabel: '1 kg', cutOptions: [],
+                name: 'Whole Chicken (Cleaned)',
+                variants: [
+                    { weight: '1 kg', price: 200, marketPrice: 240 }
+                ],
+                cutOptions: [],
                 image: 'https://res.cloudinary.com/demo/image/upload/v1/whole_chicken.jpg', deliveryTime: 15,
             },
             {
                 storeId: store._id, categoryId: chickenCat._id,
-                name: 'Drumsticks', price: 280, marketPrice: 330,
-                weightLabel: '500 g', cutOptions: [],
+                name: 'Drumsticks',
+                variants: [
+                    { weight: '250 g', price: 150, marketPrice: 180 },
+                    { weight: '500 g', price: 280, marketPrice: 340, bestValue: true }
+                ],
+                cutOptions: [],
                 image: 'https://res.cloudinary.com/demo/image/upload/v1/drumsticks.jpg', deliveryTime: 18,
             },
             {
                 storeId: store._id, categoryId: bonelessCat._id,
-                name: 'Boneless (Breast)', price: 350, marketPrice: 400,
-                weightLabel: '500 g', cutOptions: ['Cubes', 'Strips'],
+                name: 'Boneless (Breast)',
+                variants: [
+                    { weight: '250 g', price: 190, marketPrice: 220 },
+                    { weight: '500 g', price: 360, marketPrice: 420, bestValue: true }
+                ],
+                cutOptions: ['Cubes', 'Strips'],
                 image: 'https://res.cloudinary.com/demo/image/upload/v1/boneless_breast.jpg', deliveryTime: 20,
             },
             {
                 storeId: store._id, categoryId: bonelessCat._id,
-                name: 'Boneless (Thigh)', price: 320, marketPrice: 370,
-                weightLabel: '500 g', cutOptions: ['Cubes', 'Strips'],
+                name: 'Boneless (Thigh)',
+                variants: [
+                    { weight: '250 g', price: 170, marketPrice: 200 },
+                    { weight: '500 g', price: 330, marketPrice: 390, bestValue: true }
+                ],
+                cutOptions: ['Cubes', 'Strips'],
                 image: 'https://res.cloudinary.com/demo/image/upload/v1/boneless_thigh.jpg', deliveryTime: 20,
             },
             {
                 storeId: store._id, categoryId: marinatedCat._id,
-                name: 'Tandoori Marinated', price: 380, marketPrice: 450,
-                weightLabel: '500 g', cutOptions: ['Leg Pieces', 'Mixed'],
+                name: 'Tandoori Marinated',
+                variants: [
+                    { weight: '250 g', price: 210, marketPrice: 240 },
+                    { weight: '500 g', price: 400, marketPrice: 480, bestValue: true }
+                ],
+                cutOptions: ['Leg Pieces', 'Mixed'],
                 image: 'https://res.cloudinary.com/demo/image/upload/v1/tandoori.jpg', deliveryTime: 20,
             },
             {
                 storeId: store._id, categoryId: eggsCat._id,
-                name: 'Farm Fresh Eggs', price: 80, marketPrice: 96,
-                weightLabel: '12 pcs', cutOptions: [], isVeg: true,
+                name: 'Farm Fresh Eggs',
+                variants: [
+                    { weight: '6 pcs', price: 45, marketPrice: 55 },
+                    { weight: '12 pcs', price: 85, marketPrice: 105, bestValue: true }
+                ],
+                cutOptions: [],
                 image: 'https://res.cloudinary.com/demo/image/upload/v1/eggs.jpg', deliveryTime: 15,
             },
             {
                 storeId: store._id, categoryId: rtcCat._id,
-                name: 'Chicken Keema', price: 300, marketPrice: 350,
-                weightLabel: '500 g', cutOptions: [],
+                name: 'Chicken Keema',
+                variants: [
+                    { weight: '250 g', price: 160, marketPrice: 190 },
+                    { weight: '500 g', price: 310, marketPrice: 370, bestValue: true }
+                ],
+                cutOptions: [],
                 image: 'https://res.cloudinary.com/demo/image/upload/v1/keema.jpg', deliveryTime: 20,
             },
         ]);

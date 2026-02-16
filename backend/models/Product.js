@@ -20,28 +20,32 @@ const productSchema = new mongoose.Schema(
             type: String,
             default: 'Fresh • Cleaned • Cut After Order',
         },
-        price: {
-            type: Number,
-            required: [true, 'Price is required'],
-        },
-        marketPrice: {
-            type: Number,
-        },
-        weightLabel: {
-            type: String,
-            required: [true, 'Weight label is required'],
-        },
+        variants: [
+            {
+                weight: {
+                    type: String,
+                    required: true,
+                },
+                price: {
+                    type: Number,
+                    required: true,
+                },
+                marketPrice: {
+                    type: Number,
+                },
+                inStock: {
+                    type: Boolean,
+                    default: true,
+                },
+                bestValue: {
+                    type: Boolean,
+                    default: false,
+                },
+            },
+        ],
         cutOptions: {
             type: [String],
             default: [],
-        },
-        inStock: {
-            type: Boolean,
-            default: true,
-        },
-        isVeg: {
-            type: Boolean,
-            default: false,
         },
         image: {
             type: String,
