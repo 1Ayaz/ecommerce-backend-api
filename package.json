@@ -1,0 +1,33 @@
+{
+  "name": "mubarak-app",
+  "version": "1.0.0",
+  "description": "Mubarak – Fresh Chicken Delivery (MERN)",
+  "scripts": {
+    "server": "nodemon backend/server.js",
+    "client": "npm run dev --prefix client",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "build": "cd client && npm install && npm run build",
+    "start": "node backend/server.js",
+    "seed": "node backend/seeder.js"
+  },
+  "dependencies": {
+    "bcryptjs": "2.4.3",
+    "cloudinary": "2.0.0",
+    "concurrently": "8.2.2",
+    "cors": "2.8.5",
+    "dotenv": "16.4.1",
+    "express": "4.18.2",
+    "express-async-handler": "1.2.0",
+    "helmet": "7.1.0",
+    "jsonwebtoken": "9.0.2",
+    "mongoose": "8.1.1",
+    "morgan": "1.10.0",
+    "multer": "1.4.5-lts.1",
+    "multer-storage-cloudinary": "4.0.0",
+    "firebase-admin": "^12.0.0",
+    "cookie-parser": "^1.4.6"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.3"
+  }
+}

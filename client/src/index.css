@@ -1,0 +1,77 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+/* ============ Mubarak Design Tokens ============ */
+@theme {
+  --color-brand-red: #D10024;
+  --color-brand-dark: #15161D;
+  --color-brand-muted: #8D99AE;
+  --color-brand-bg: #F4F6FB;
+  --color-brand-card: #FFFFFF;
+  --color-brand-border: #E4E7ED;
+  --color-brand-green: #15803d;
+
+  --font-sans: 'Poppins', sans-serif;
+
+  --shadow-float: 0 4px 12px rgba(209, 0, 36, 0.3);
+  --shadow-sheet: 0 -4px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* ============ Global Styles ============ */
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-brand-bg);
+  color: var(--color-brand-dark);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============ Custom Animations ============ */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.2s ease-out;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+/* ============ Scrollbar ============ */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-brand-muted);
+  border-radius: 4px;
+}
+
+/* Hide scrollbar for category rail */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
