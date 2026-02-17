@@ -1,11 +1,14 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingBag, User, LogOut, MapPin } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import useCartStore from '../store/useCartStore';
+import LoginSheet from './LoginSheet';
 
 export default function Header() {
     const { user, logout } = useAuthStore();
     const totalCount = useCartStore((s) => s.getTotalCount());
+    const [showLogin, setShowLogin] = useState(false);
 
     return (
         <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-brand-border">
@@ -67,15 +70,18 @@ export default function Header() {
                             </button>
                         </div>
                     ) : (
-                        <Link
-                            to="/"
+                        <button
+                            onClick={() => setShowLogin(true)}
                             className="text-sm font-semibold text-brand-red hover:text-red-700 transition-colors"
                         >
                             Login
-                        </Link>
+                        </button>
                     )}
                 </div>
             </div>
+
+            {/* Login Sheet */}
+            <LoginSheet isOpen={showLogin} onClose={() => setShowLogin(false)} />
         </header>
     );
 }

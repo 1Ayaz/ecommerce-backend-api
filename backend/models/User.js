@@ -26,6 +26,11 @@ const userSchema = new mongoose.Schema(
             enum: ['customer', 'driver', 'admin', 'vendor'],
             default: 'customer',
         },
+        storeId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Store',
+            default: null,
+        },
         name: {
             type: String,
         },

@@ -51,6 +51,12 @@ const productSchema = new mongoose.Schema(
             type: String,
             required: [true, 'Product image is required'],
         },
+        images: {
+            type: [String],
+            default: function () {
+                return this.image ? [this.image] : [];
+            }
+        },
         deliveryTime: {
             type: Number,
             default: 20,

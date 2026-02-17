@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Minus, ShoppingBag } from 'lucide-react';
+import { Plus, Minus, Zap } from 'lucide-react';
+import { motion } from 'framer-motion';
 import useCartStore from '../store/useCartStore';
 import useAuthStore from '../store/useAuthStore';
 import LoginSheet from './LoginSheet';
+import ProductImageCarousel from './ProductImageCarousel';
 
-export default function ProductCard({ product }) {
-    const { items, addItem, removeItem, getItemCount } = useCartStore();
+export default function ChickenProduct({ product }) {
+    const { addItem, removeItem, getItemCount } = useCartStore();
     const { user } = useAuthStore();
     const [showLogin, setShowLogin] = useState(false);
 
@@ -34,27 +36,35 @@ export default function ProductCard({ product }) {
         removeItem(cartKey);
     };
 
-    const discount = selectedVariant.marketPrice && selectedVariant.marketPrice > selectedVariant.price
+    // Calculate discount percentage
+    const discount = selectedVariant?.marketPrice
         ? Math.round(((selectedVariant.marketPrice - selectedVariant.price) / selectedVariant.marketPrice) * 100)
         : 0;
 
     return (
-        <div className="bg-white rounded-xl p-3 shadow-sm border border-brand-border flex flex-col h-full relative hover:shadow-md transition-shadow">
+        <motion.div
+            whileHover={{ y: -4 }}
+            className="bg-white rounded-2xl border border-brand-border overflow-hidden flex flex-col h-full group transition-shadow hover:shadow-xl hover:shadow-brand-red/5 p-3"
+        >
             {/* Image Area - Links to PDP */}
-            <Link to={`/product/${product._id}`} className="block relative aspect-square rounded-lg overflow-hidden bg-gray-50 mb-3">
-                <img
-                    src={product.image}
+            <Link to={`/product/${product._id}`} className="block relative aspect-square mb-3">
+                <ProductImageCarousel
+                    images={product.images || [product.image]}
                     alt={product.name}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                    onError={(e) => {
-                        e.target.src = 'https://placehold.co/300x300/F4F6FB/8D99AE?text=🐔';
-                    }}
                 />
+
+                {/* Discount Badge */}
                 {discount > 0 && (
-                    <span className="absolute top-0 left-0 bg-brand-red text-white text-[10px] font-bold px-1.5 py-0.5 rounded-br-lg z-10">
-                        {discount}% OFF
-                    </span>
+                    <div className="absolute top-2 left-2 bg-brand-red text-white text-[10px] font-black px-2 py-1 rounded-lg shadow-lg flex items-center gap-1 z-20">
+                        <Zap size={10} className="fill-white" /> {discount}% OFF
+                    </div>
+                )}
+
+                {/* Best Value Badge */}
+                {selectedVariant?.bestValue && (
+                    <div className="absolute top-2 right-2 bg-yellow-400 text-brand-dark text-[10px] font-bold px-2 py-1 rounded-lg shadow-sm border border-yellow-500 z-20">
+                        BEST VALUE
+                    </div>
                 )}
             </Link>
 
@@ -77,8 +87,8 @@ export default function ProductCard({ product }) {
                             key={v._id}
                             onClick={() => setSelectedVariant(v)}
                             className={`px-2 py-1 rounded-md text-[10px] font-bold border transition-all ${selectedVariant._id === v._id
-                                    ? 'border-brand-red bg-brand-red/5 text-brand-red'
-                                    : 'border-brand-border text-brand-muted hover:border-brand-red/30'
+                                ? 'border-brand-red bg-brand-red/5 text-brand-red'
+                                : 'border-brand-border text-brand-muted hover:border-brand-red/30'
                                 }`}
                         >
                             {v.weight}
@@ -104,7 +114,6 @@ export default function ProductCard({ product }) {
                             <button
                                 onClick={handleRemove}
                                 className="p-1 hover:bg-red-800 rounded transition-colors"
-                                aria-label="Decrease quantity"
                             >
                                 <Minus size={14} strokeWidth={3} />
                             </button>
@@ -112,7 +121,6 @@ export default function ProductCard({ product }) {
                             <button
                                 onClick={handleAdd}
                                 className="p-1 hover:bg-red-800 rounded transition-colors"
-                                aria-label="Increase quantity"
                             >
                                 <Plus size={14} strokeWidth={3} />
                             </button>
@@ -129,6 +137,6 @@ export default function ProductCard({ product }) {
             </div>
 
             <LoginSheet isOpen={showLogin} onClose={() => setShowLogin(false)} />
-        </div>
+        </motion.div>
     );
 }

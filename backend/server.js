@@ -14,7 +14,7 @@ connectDB();
 const app = express();
 
 // --------------- Middleware ---------------
-app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
+app.use(cors({ origin: process.env.CLIENT_URL || '*', credentials: true }));
 app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.json());
@@ -38,6 +38,9 @@ app.use('/api/products', require('./routes/productRoutes'));
 // Order Routes
 app.use('/api/orders', require('./routes/orderRoutes'));
 
+// Delivery Routes
+app.use('/api/delivery', require('./routes/deliveryRoutes'));
+
 // --------------- Error Handler ---------------
 app.use((err, req, res, next) => {
     const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
@@ -52,6 +55,13 @@ app.use((err, req, res, next) => {
 
 // --------------- Start Server ---------------
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`🚀 Mubarak API running on port ${PORT}`);
-});
+
+// Only start server if not in test mode
+if (process.env.NODE_ENV !== 'test') {
+    app.listen(PORT, () => {
+        console.log(`🚀 Mubarak API running on port ${PORT}`);
+    });
+}
+
+// Export app for testing
+module.exports = app;

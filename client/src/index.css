@@ -1,8 +1,23 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+@layer utilities {
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .shadow-glow {
+    box-shadow: 0 0 15px rgba(209, 44, 44, 0.4);
+  }
+}
 
 /* ============ Global Styles ============ */
 body {
@@ -58,14 +73,4 @@ body {
 ::-webkit-scrollbar-thumb {
   background: #8D99AE;
   border-radius: 4px;
-}
-
-/* Hide scrollbar for category rail */
-.hide-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.hide-scrollbar::-webkit-scrollbar {
-  display: none;
 }
