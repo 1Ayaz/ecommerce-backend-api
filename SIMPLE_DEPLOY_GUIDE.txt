@@ -1,0 +1,114 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║              🚀 SIMPLE DEPLOYMENT - COPY & PASTE THESE COMMANDS 🚀            ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+STEP 1: Open PowerShell or Command Prompt
+══════════════════════════════════════════
+
+Press Win + R, type "powershell", press Enter
+
+
+STEP 2: SSH into Your Server
+══════════════════════════════════════════
+
+Copy and paste this command:
+
+ssh ayaz1@192.168.0.6
+
+When prompted for password, type: ayaz2006
+
+
+STEP 3: Run Deployment Commands
+══════════════════════════════════════════
+
+Copy and paste these commands ONE BY ONE:
+
+# Install prerequisites
+sudo apt update
+sudo apt install -y curl git
+
+# Download and run deployment script
+cd ~
+curl -fsSL https://raw.githubusercontent.com/1Ayaz/mubarak-fresh-chicken/master/auto-deploy.sh -o deploy.sh
+chmod +x deploy.sh
+./deploy.sh
+
+
+THAT'S IT! The script will automatically:
+══════════════════════════════════════════
+
+✅ Install Node.js, PM2, Nginx
+✅ Clone your GitHub repository
+✅ Install all dependencies
+✅ Build the frontend
+✅ Start the backend with PM2
+✅ Configure Nginx
+✅ Set up everything!
+
+
+AFTER DEPLOYMENT - Test It:
+══════════════════════════════════════════
+
+1. Open browser on your local network:
+   http://192.168.0.6
+
+2. You should see the Mubarak Fresh Chicken app!
+
+
+TO MAKE IT PUBLIC (Accessible from Internet):
+══════════════════════════════════════════════
+
+1. Open your router admin panel (usually http://192.168.0.1)
+2. Find "Port Forwarding" or "Virtual Server"
+3. Add this rule:
+   - Service Name: Mubarak
+   - External Port: 80
+   - Internal IP: 192.168.0.6
+   - Internal Port: 80
+   - Protocol: TCP
+4. Save and apply
+
+5. Find your public IP:
+   curl ifconfig.me
+
+6. Test from your phone (using mobile data):
+   http://YOUR_PUBLIC_IP
+
+
+TROUBLESHOOTING:
+══════════════════════════════════════════
+
+If deployment fails, check logs:
+  pm2 logs mubarak-backend
+  sudo tail -f /var/log/nginx/error.log
+
+If port 80 is in use:
+  sudo systemctl stop apache2
+  sudo systemctl disable apache2
+
+Restart services:
+  pm2 restart mubarak-backend
+  sudo systemctl restart nginx
+
+
+CREDENTIALS:
+══════════════════════════════════════════
+
+Server SSH:
+  Username: ayaz1
+  Password: ayaz2006
+
+Admin Login:
+  Email: admin@mubarak.com
+  Password: admin123
+
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║                    ✅ EVERYTHING IS READY TO DEPLOY! ✅                       ║
+║                                                                              ║
+║                  Just follow the steps above and you're live!                ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
