@@ -5,11 +5,9 @@ echo ========================================
 echo.
 
 set SERVER=192.168.0.6
-set USER=mdaya
+set USER=ayaz1
 
 echo Connecting to %SERVER%...
-echo.
-echo Please enter your server password when prompted.
 echo.
 echo The deployment script will:
 echo  - Install all required software

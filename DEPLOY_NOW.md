@@ -10,7 +10,8 @@ curl -fsSL https://raw.githubusercontent.com/1Ayaz/mubarak-fresh-chicken/master/
 
 ### Step 1: SSH into your server
 ```bash
-ssh mdaya@192.168.0.6
+ssh ayaz1@192.168.0.6
+# Password: ayaz2006
 ```
 
 ### Step 2: Run these commands
