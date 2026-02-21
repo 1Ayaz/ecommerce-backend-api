@@ -1,8 +1,9 @@
 const jwt = require('jsonwebtoken');
+const asyncHandler = require('express-async-handler');
 const User = require('../models/User');
 
 // Protect routes - verify JWT
-const protect = async (req, res, next) => {
+const protect = asyncHandler(async (req, res, next) => {
     let token;
 
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
@@ -29,22 +30,23 @@ const protect = async (req, res, next) => {
         res.status(401);
         throw new Error('Not authorized, no token');
     }
-};
+});
 
 // Role-based authorization
 const authorize = (...roles) => {
-    return (req, res, next) => {
+    return asyncHandler((req, res, next) => {
         if (!req.user) {
             res.status(401);
             throw new Error('Not authenticated');
         }
 
-        if (!roles.includes(req.user.role)) {
-            res.status(403);
-            throw new Error(`Role '${req.user.role}' is not authorized to access this route`);
+        if (roles.includes(req.user.role)) {
+            return next();
         }
-        next();
-    };
+
+        res.status(403);
+        throw new Error(`Role '${req.user.role}' is not authorized to access this route`);
+    });
 };
 
 module.exports = { protect, authorize };

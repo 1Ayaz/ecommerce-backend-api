@@ -51,10 +51,15 @@ describe('ChickenProduct Component', () => {
         ]
     };
 
+    const mockOnShowVariations = jest.fn();
+
     it('should render product card', () => {
         render(
             <BrowserRouter>
-                <ChickenProduct product={mockProduct} />
+                <ChickenProduct 
+                    product={mockProduct}
+                    onShowVariations={mockOnShowVariations}
+                />
             </BrowserRouter>
         );
 
@@ -65,7 +70,10 @@ describe('ChickenProduct Component', () => {
     it('should show discount badge', () => {
         render(
             <BrowserRouter>
-                <ChickenProduct product={mockProduct} />
+                <ChickenProduct 
+                    product={mockProduct}
+                    onShowVariations={mockOnShowVariations}
+                />
             </BrowserRouter>
         );
 
@@ -76,7 +84,10 @@ describe('ChickenProduct Component', () => {
     it('should show best value badge for variant', () => {
         render(
             <BrowserRouter>
-                <ChickenProduct product={mockProduct} />
+                <ChickenProduct 
+                    product={mockProduct}
+                    onShowVariations={mockOnShowVariations}
+                />
             </BrowserRouter>
         );
 
@@ -89,7 +100,10 @@ describe('ChickenProduct Component', () => {
     it('should show all variants', () => {
         render(
             <BrowserRouter>
-                <ChickenProduct product={mockProduct} />
+                <ChickenProduct 
+                    product={mockProduct}
+                    onShowVariations={mockOnShowVariations}
+                />
             </BrowserRouter>
         );
 
@@ -100,7 +114,10 @@ describe('ChickenProduct Component', () => {
     it('should switch variants on click', () => {
         render(
             <BrowserRouter>
-                <ChickenProduct product={mockProduct} />
+                <ChickenProduct 
+                    product={mockProduct}
+                    onShowVariations={mockOnShowVariations}
+                />
             </BrowserRouter>
         );
 
@@ -118,7 +135,10 @@ describe('ChickenProduct Component', () => {
     it('should show ADD button when count is 0', () => {
         render(
             <BrowserRouter>
-                <ChickenProduct product={mockProduct} />
+                <ChickenProduct 
+                    product={mockProduct}
+                    onShowVariations={mockOnShowVariations}
+                />
             </BrowserRouter>
         );
 
@@ -128,7 +148,10 @@ describe('ChickenProduct Component', () => {
     it('should show market price with strikethrough', () => {
         const { container } = render(
             <BrowserRouter>
-                <ChickenProduct product={mockProduct} />
+                <ChickenProduct 
+                    product={mockProduct}
+                    onShowVariations={mockOnShowVariations}
+                />
             </BrowserRouter>
         );
 
@@ -139,7 +162,10 @@ describe('ChickenProduct Component', () => {
     it('should render product image carousel', () => {
         const { container } = render(
             <BrowserRouter>
-                <ChickenProduct product={mockProduct} />
+                <ChickenProduct 
+                    product={mockProduct}
+                    onShowVariations={mockOnShowVariations}
+                />
             </BrowserRouter>
         );
 
@@ -150,7 +176,10 @@ describe('ChickenProduct Component', () => {
     it('should link to product detail page', () => {
         const { container } = render(
             <BrowserRouter>
-                <ChickenProduct product={mockProduct} />
+                <ChickenProduct 
+                    product={mockProduct}
+                    onShowVariations={mockOnShowVariations}
+                />
             </BrowserRouter>
         );
 

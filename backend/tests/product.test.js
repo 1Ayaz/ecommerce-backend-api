@@ -9,7 +9,7 @@ describe('Product API Tests', () => {
     let storeId, categoryId;
 
     beforeAll(async () => {
-        await mongoose.connect(process.env.MONGO_URI || 'mongodb://192.168.0.6:27017/mubarak_test_db');
+        await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/mubarak_test_db');
 
         // Create test store
         const store = await Store.create({

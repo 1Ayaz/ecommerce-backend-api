@@ -31,45 +31,26 @@ const generateToken = (userId, role) => {
     return jwt.sign({ id: userId, role }, process.env.JWT_ACCESS_SECRET, { expiresIn: '1h' });
 };
 
-describe('Authentication Tests', () => {
-    describe('POST /api/auth/send-otp', () => {
-        it('should send OTP for valid phone number', async () => {
-            const res = await request(app)
-                .post('/api/auth/send-otp')
-                .send({ phone: '9876543210' });
-
-            expect(res.statusCode).toBe(200);
-            expect(res.body.success).toBe(true);
-            expect(res.body.message).toBe('OTP sent successfully');
-        });
-
-        it('should reject invalid phone number', async () => {
-            const res = await request(app)
-                .post('/api/auth/send-otp')
-                .send({ phone: '123' });
-
-            expect(res.statusCode).toBe(400);
-        });
-    });
-
-    describe('POST /api/auth/verify-otp', () => {
-        it('should reject invalid OTP', async () => {
-            const res = await request(app)
-                .post('/api/auth/verify-otp')
-                .send({ phone: '9876543210', otp: '000000' });
-
-            expect(res.statusCode).toBe(401);
-        });
-    });
-});
-
 describe('Store Tests', () => {
     let store;
 
     beforeEach(async () => {
         store = await Store.create({
             name: 'Test Store',
+            ownerId: null,
             location: { type: 'Point', coordinates: [81.804, 17.0005] },
+            serviceArea: {
+                type: 'Polygon',
+                coordinates: [
+                    [
+                        [81.80, 17.00],
+                        [81.81, 17.00],
+                        [81.81, 17.01],
+                        [81.80, 17.01],
+                        [81.80, 17.00]
+                    ]
+                ]
+            },
             address: 'Test Address',
             servicePincodes: ['533101'],
             serviceRadiusKm: 5,

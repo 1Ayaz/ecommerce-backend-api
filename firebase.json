@@ -1,0 +1,10 @@
+{
+  "auth": {
+    "providers": {
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "Mubarak Fresh Chicken",
+        "supportEmail": "mohammadayazq2006@gmail.com"
+      }
+    }
+  }
+}

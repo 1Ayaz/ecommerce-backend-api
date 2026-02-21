@@ -1,142 +1,139 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Plus, Minus, Zap } from 'lucide-react';
+import { Plus, Minus } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import useCartStore from '../store/useCartStore';
-import useAuthStore from '../store/useAuthStore';
-import LoginSheet from './LoginSheet';
-import ProductImageCarousel from './ProductImageCarousel';
 
-export default function ChickenProduct({ product }) {
+/**
+ * Universal Product Card — used on Home, Category, Search.
+ *
+ * Props:
+ *   product       — full product object
+ *   onShowVariations(product) — callback to open variation bottom sheet
+ */
+export default function ChickenProduct({ product, onShowVariations }) {
+    const navigate = useNavigate();
     const { addItem, removeItem, getItemCount } = useCartStore();
-    const { user } = useAuthStore();
-    const [showLogin, setShowLogin] = useState(false);
 
-    // Default to first variant
-    const [selectedVariant, setSelectedVariant] = useState(product.variants?.[0] || null);
+    const variations = product.variations || [];
+    if (variations.length === 0) return null;
 
-    if (!selectedVariant) return null;
+    const displayVar = variations[0];
+    const hasMultiple = variations.length > 1;
+    const price = displayVar.discountedPrice || displayVar.price || displayVar.basePrice || 0;
+    const originalPrice = displayVar.discountedPrice ? (displayVar.price || displayVar.basePrice) : null;
+    const discount = originalPrice ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
 
-    const count = getItemCount(product._id, selectedVariant._id);
+    // Cart count for this product (total across all variations)
+    const totalInCart = variations.reduce(
+        (sum, v) => sum + getItemCount(product._id, v.label),
+        0
+    );
 
-    const handleAdd = (e) => {
+    // Quick-add logic: single variation → add directly, multiple → open sheet
+    const handleAddClick = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        if (!user) {
-            setShowLogin(true);
-            return;
+        if (hasMultiple) {
+            onShowVariations(product);
+        } else {
+            addItem(product, displayVar);
         }
-        addItem(product, selectedVariant);
     };
 
-    const handleRemove = (e) => {
+    const handleDecrease = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        const cartKey = `${product._id}_${selectedVariant._id}_default`;
-        removeItem(cartKey);
+        // Find the first variation in cart and decrement
+        for (const v of variations) {
+            const cartKey = `${product._id}_${v.label}`;
+            if (getItemCount(product._id, v.label) > 0) {
+                removeItem(cartKey);
+                return;
+            }
+        }
     };
-
-    // Calculate discount percentage
-    const discount = selectedVariant?.marketPrice
-        ? Math.round(((selectedVariant.marketPrice - selectedVariant.price) / selectedVariant.marketPrice) * 100)
-        : 0;
 
     return (
         <motion.div
             whileHover={{ y: -4 }}
-            className="bg-white rounded-2xl border border-brand-border overflow-hidden flex flex-col h-full group transition-shadow hover:shadow-xl hover:shadow-brand-red/5 p-3"
+            onClick={() => navigate(`/product/${product._id}`)}
+            className="bg-white rounded-2xl overflow-hidden border border-gray-100/60 flex flex-col h-full group cursor-pointer transition-all hover:shadow-lg"
         >
-            {/* Image Area - Links to PDP */}
-            <Link to={`/product/${product._id}`} className="block relative aspect-square mb-3">
-                <ProductImageCarousel
-                    images={product.images || [product.image]}
-                    alt={product.name}
+            {/* ── Image ── */}
+            <div className="relative aspect-[4/3] overflow-hidden bg-gray-50">
+                <img
+                    src={product.image}
+                    alt={product.imageAlt || product.name}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    loading="lazy"
+                    onError={(e) => { e.target.src = 'https://placehold.co/600x450?text=Fresh+Chicken'; }}
                 />
 
-                {/* Discount Badge */}
+                {/* Discount badge */}
                 {discount > 0 && (
-                    <div className="absolute top-2 left-2 bg-brand-red text-white text-[10px] font-black px-2 py-1 rounded-lg shadow-lg flex items-center gap-1 z-20">
-                        <Zap size={10} className="fill-white" /> {discount}% OFF
+                    <div className="absolute top-2 left-2 bg-[#D11243] text-white px-2 py-0.5 rounded-lg text-[10px] font-bold shadow-md">
+                        {discount}% OFF
                     </div>
                 )}
-
-                {/* Best Value Badge */}
-                {selectedVariant?.bestValue && (
-                    <div className="absolute top-2 right-2 bg-yellow-400 text-brand-dark text-[10px] font-bold px-2 py-1 rounded-lg shadow-sm border border-yellow-500 z-20">
-                        BEST VALUE
-                    </div>
-                )}
-            </Link>
-
-            {/* Info Area */}
-            <div className="flex-1">
-                <div className="text-[10px] text-brand-muted font-bold uppercase tracking-wider mb-0.5 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-brand-green"></span>
-                    {product.deliveryTime || 20} mins
-                </div>
-                <Link to={`/product/${product._id}`} className="block">
-                    <h3 className="text-brand-dark font-semibold text-sm leading-tight mb-1 line-clamp-2 hover:text-brand-red transition-colors">
-                        {product.name}
-                    </h3>
-                </Link>
-
-                {/* Variants Selection (Instamart Pill Style) */}
-                <div className="flex flex-wrap gap-1.5 my-2">
-                    {product.variants.map((v) => (
-                        <button
-                            key={v._id}
-                            onClick={() => setSelectedVariant(v)}
-                            className={`px-2 py-1 rounded-md text-[10px] font-bold border transition-all ${selectedVariant._id === v._id
-                                ? 'border-brand-red bg-brand-red/5 text-brand-red'
-                                : 'border-brand-border text-brand-muted hover:border-brand-red/30'
-                                }`}
-                        >
-                            {v.weight}
-                            {v.bestValue && <span className="ml-1 text-[8px] opacity-70">★</span>}
-                        </button>
-                    ))}
-                </div>
             </div>
 
-            {/* Footer: Price and Thumb-Friendly ADD Button */}
-            <div className="flex items-center justify-between mt-auto pt-2 border-t border-brand-border/40">
-                <div className="flex flex-col">
-                    {selectedVariant.marketPrice && selectedVariant.marketPrice > selectedVariant.price && (
-                        <span className="text-[10px] text-brand-muted line-through">₹{selectedVariant.marketPrice}</span>
-                    )}
-                    <span className="text-brand-dark font-bold text-sm">₹{selectedVariant.price}</span>
-                </div>
+            {/* ── Info ── */}
+            <div className="p-3 flex-1 flex flex-col">
+                <h3 className="text-secondary font-bold text-sm leading-tight line-clamp-2 min-h-[2.25rem]">
+                    {product.name}
+                </h3>
 
-                {/* Instamart Style Add/Quantity Button */}
-                <div className="relative h-9 w-20 flex items-center justify-center">
-                    {count > 0 ? (
-                        <div className="absolute inset-0 bg-brand-red text-white rounded-lg flex items-center justify-between px-1 shadow-sm">
-                            <button
-                                onClick={handleRemove}
-                                className="p-1 hover:bg-red-800 rounded transition-colors"
-                            >
-                                <Minus size={14} strokeWidth={3} />
-                            </button>
-                            <span className="font-bold text-xs">{count}</span>
-                            <button
-                                onClick={handleAdd}
-                                className="p-1 hover:bg-red-800 rounded transition-colors"
-                            >
-                                <Plus size={14} strokeWidth={3} />
-                            </button>
+                {/* Weight label */}
+                <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                    {hasMultiple ? `${variations.length} options` : displayVar.label}
+                </p>
+
+                {/* Price + Add */}
+                <div className="mt-auto pt-3 flex items-center justify-between">
+                    <div>
+                        <div className="flex items-baseline gap-1.5">
+                            <span className="text-secondary font-bold text-[15px]">₹{price}</span>
+                            {originalPrice && (
+                                <span className="text-xs text-slate-400 line-through">₹{originalPrice}</span>
+                            )}
                         </div>
-                    ) : (
-                        <button
-                            onClick={handleAdd}
-                            className="absolute inset-0 bg-white border border-brand-red text-brand-red font-bold text-xs rounded-lg shadow-sm uppercase tracking-wide hover:bg-brand-red hover:text-white transition-all active:scale-95"
-                        >
-                            Add
-                        </button>
-                    )}
+                        {hasMultiple && (
+                            <p className="text-[10px] text-slate-400">onwards</p>
+                        )}
+                    </div>
+
+                    {/* Add to Cart / Qty Controls */}
+                    <div className="relative" onClick={(e) => e.stopPropagation()}>
+                        {totalInCart > 0 ? (
+                            <div className="flex items-center bg-[#D11243] rounded-xl overflow-hidden shadow-lg">
+                                <button
+                                    onClick={handleDecrease}
+                                    className="w-8 h-8 flex items-center justify-center text-white active:bg-red-800 transition-colors"
+                                >
+                                    <Minus size={14} strokeWidth={2.5} />
+                                </button>
+                                <span className="text-white font-bold text-sm min-w-[1.25rem] text-center">
+                                    {totalInCart}
+                                </span>
+                                <button
+                                    onClick={handleAddClick}
+                                    className="w-8 h-8 flex items-center justify-center text-white active:bg-red-800 transition-colors"
+                                >
+                                    <Plus size={14} strokeWidth={2.5} />
+                                </button>
+                            </div>
+                        ) : (
+                            <motion.button
+                                whileTap={{ scale: 0.92 }}
+                                onClick={handleAddClick}
+                                className="h-9 px-4 rounded-xl bg-white border-2 border-[#D11243] text-[#D11243] font-bold text-xs uppercase tracking-wide hover:bg-red-50 active:scale-95 shadow-sm transition-all"
+                            >
+                                ADD
+                            </motion.button>
+                        )}
+                    </div>
                 </div>
             </div>
-
-            <LoginSheet isOpen={showLogin} onClose={() => setShowLogin(false)} />
         </motion.div>
     );
 }

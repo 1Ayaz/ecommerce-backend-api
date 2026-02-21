@@ -2,292 +2,299 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+
 const Store = require('./models/Store');
 const Category = require('./models/Category');
 const Product = require('./models/Product');
 const User = require('./models/User');
-const bcrypt = require('bcryptjs');
+const VendorProduct = require('./models/VendorProduct');
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://192.168.0.6:27017/mubarak_db';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/mubarak_db';
 
 const seedDB = async () => {
     try {
         await mongoose.connect(MONGO_URI);
-        console.log('Connected to MongoDB for seeding...');
+        console.log('✅ Connected to MongoDB for seeding...\n');
 
-        // Clear existing data
-        await Store.deleteMany({});
-        await Category.deleteMany({});
+        // ── Clear all existing data ──────────────────────────────────────────
+        await VendorProduct.deleteMany({});
         await Product.deleteMany({});
-        await User.deleteMany({ role: { $in: ['vendor', 'driver', 'admin'] } });
-        console.log('Cleared existing data.');
+        await Category.deleteMany({});
+        await Store.deleteMany({});
+        await User.deleteMany({});
+        console.log('🗑️  Cleared all existing data.\n');
 
-        // --- Create Admin User ---
+        // ── Password hash (used for all staff accounts) ──────────────────────
         const salt = await bcrypt.genSalt(10);
         const hashedPw = await bcrypt.hash('admin123', salt);
-        const adminUser = await User.create({
+
+        // ── 1. Admin ──────────────────────────────────────────────────────
+        const admin = await User.create({
             name: 'Mubarak Admin',
             email: 'admin@mubarak.com',
             password: hashedPw,
             role: 'admin',
             isVerified: true,
         });
-        console.log('✅ Admin user created (email: admin@mubarak.com, password: admin123)');
+        console.log('✅ Admin created      → admin@mubarak.com / admin123');
 
-        // --- Create 3 Stores with Vendors and Delivery Boys ---
-        const storesData = [
-            {
-                name: 'Mubarak Rajahmundry',
+        // ── 3. Vendor (Rajahmundry) ──────────────────────────────────────────
+        const vendor = await User.create({
+            name: 'Vendor Rajahmundry',
+            email: 'vendor@mubarak.com',
+            password: hashedPw,
+            role: 'vendor',
+            isVerified: true,
+        });
+        console.log('✅ Vendor created     → vendor@mubarak.com / admin123');
+
+        // ── 4. Rajahmundry Store ─────────────────────────────────────────────
+        // Center: 17.0005° N, 81.804° E  (Rajahmundry city center)
+        // serviceArea: a ~5 km polygon around the city center
+        const store = await Store.create({
+            name: 'Mubarak Fresh Chicken – Rajahmundry',
+            businessName: 'Mubarak Fresh Chicken',
+            ownerId: vendor._id,
+            city: 'Rajahmundry',
+            address: 'Main Road, Rajahmundry, Andhra Pradesh 533101',
+            phone: '9876543210',
+            isActive: true,
+            isOpen: true,
+            serviceRadiusKm: 6,
+            servicePincodes: ['533101', '533103', '533104', '533105', '533106'],
+            location: {
+                type: 'Point',
                 coordinates: [81.804, 17.0005], // [lng, lat]
-                address: 'Main Road, Rajahmundry, AP 533101',
-                servicePincodes: ['533101', '533103', '533104', '533105'],
-                serviceRadiusKm: 5,
-                phone: '9876543210',
-                vendorEmail: 'vendor1@mubarak.com',
-                vendorName: 'Vendor Rajahmundry',
             },
-            {
-                name: 'Mubarak Kakinada',
-                coordinates: [82.2475, 16.9891],
-                address: 'Beach Road, Kakinada, AP 533001',
-                servicePincodes: ['533001', '533002', '533003'],
-                serviceRadiusKm: 5,
-                phone: '9876543211',
-                vendorEmail: 'vendor2@mubarak.com',
-                vendorName: 'Vendor Kakinada',
+            // GeoJSON Polygon — roughly 6 km box around Rajahmundry
+            serviceArea: {
+                type: 'Polygon',
+                coordinates: [[
+                    [81.750, 16.960],
+                    [81.860, 16.960],
+                    [81.860, 17.045],
+                    [81.750, 17.045],
+                    [81.750, 16.960], // close the ring
+                ]],
             },
-            {
-                name: 'Mubarak Visakhapatnam',
-                coordinates: [83.2185, 17.6868],
-                address: 'RK Beach Road, Visakhapatnam, AP 530001',
-                servicePincodes: ['530001', '530002', '530003', '530004'],
-                serviceRadiusKm: 7,
-                phone: '9876543212',
-                vendorEmail: 'vendor3@mubarak.com',
-                vendorName: 'Vendor Visakhapatnam',
-            },
-        ];
+        });
+        console.log(`✅ Store created      → ${store.name}`);
 
-        const stores = [];
-        const vendors = [];
-        const allDrivers = [];
+        // Link vendor to store
+        vendor.vendorId = store._id;
+        await vendor.save();
 
-        for (const storeData of storesData) {
-            // Create vendor for this store
-            const vendor = await User.create({
-                name: storeData.vendorName,
-                email: storeData.vendorEmail,
-                password: hashedPw,
-                role: 'vendor',
-                isVerified: true,
-            });
-            vendors.push(vendor);
+        // ── 5. Delivery Driver ───────────────────────────────────────────────
+        const driver = await User.create({
+            name: 'Driver – Rajahmundry',
+            email: 'driver@mubarak.com',
+            password: hashedPw,
+            role: 'driver',
+            vendorId: store._id,
+            isVerified: true,
+        });
+        console.log('✅ Driver created     → driver@mubarak.com / admin123\n');
 
-            // Create store
-            const store = await Store.create({
-                name: storeData.name,
-                ownerId: vendor._id,
-                location: {
-                    type: 'Point',
-                    coordinates: storeData.coordinates,
-                },
-                address: storeData.address,
-                servicePincodes: storeData.servicePincodes,
-                serviceRadiusKm: storeData.serviceRadiusKm,
-                isOpen: true,
-                phone: storeData.phone,
-            });
-            stores.push(store);
-
-            // Update vendor with storeId
-            vendor.storeId = store._id;
-            await vendor.save();
-
-            // Create 2-3 delivery boys for this store
-            const driverCount = 2;
-            for (let i = 1; i <= driverCount; i++) {
-                const driver = await User.create({
-                    name: `Driver ${i} - ${store.name}`,
-                    phone: `98765432${stores.length}${i}`,
-                    role: 'driver',
-                    storeId: store._id,
-                    isVerified: true,
-                });
-                allDrivers.push(driver);
-            }
-
-            console.log(`✅ Created store: ${store.name}`);
-            console.log(`   Vendor: ${vendor.email} (password: admin123)`);
-            console.log(`   Delivery boys: ${driverCount}`);
-        }
-
-        console.log(`\n✅ Total: ${stores.length} stores, ${vendors.length} vendors, ${allDrivers.length} delivery boys`);
-
-        // --- Create Categories (for first store as example) ---
-        const categories = await Category.insertMany([
+        // ── 6. Categories ────────────────────────────────────────────────────
+        const [chickenCat, bonelessCat, marinatedCat, eggsCat] = await Category.insertMany([
             {
                 name: 'Chicken',
-                image: 'https://res.cloudinary.com/demo/image/upload/v1/chicken_category.jpg',
-                storeId: stores[0]._id,
+                image: 'https://images.unsplash.com/photo-1587593810167-a84920ea0781?w=400',
+                storeId: store._id,
             },
             {
                 name: 'Boneless',
-                image: 'https://res.cloudinary.com/demo/image/upload/v1/boneless_category.jpg',
-                storeId: stores[0]._id,
+                image: 'https://images.unsplash.com/photo-1604503468506-a8da13d11bea?w=400',
+                storeId: store._id,
             },
             {
                 name: 'Marinated',
-                image: 'https://res.cloudinary.com/demo/image/upload/v1/marinated_category.jpg',
-                storeId: stores[0]._id,
+                image: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=400',
+                storeId: store._id,
             },
             {
                 name: 'Eggs',
-                image: 'https://res.cloudinary.com/demo/image/upload/v1/eggs_category.jpg',
-                storeId: stores[0]._id,
+                image: 'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=400',
+                storeId: store._id,
             },
         ]);
-        console.log(`\n✅ ${categories.length} categories created for ${stores[0].name}`);
+        console.log('✅ 4 categories created\n');
 
-        const [chickenCat, bonelessCat, marinatedCat, eggsCat] = categories;
-
-        // --- Create Products (for first store) ---
-        const products = await Product.insertMany([
+        // ── 7. Global Product Catalog ────────────────────────────────────────
+        // Field names match Product.js schema: variations[].label, variations[].basePrice
+        const productsData = [
             {
-                storeId: stores[0]._id,
                 categoryId: chickenCat._id,
-                name: 'Curry Cut (Skin)',
+                name: 'Curry Cut (With Skin)',
                 description: 'Fresh • Cleaned • Cut After Order',
-                variants: [
-                    { weight: '500 g', price: 120, marketPrice: 140, inStock: true },
-                    { weight: '1 kg', price: 230, marketPrice: 280, inStock: true, bestValue: true },
-                ],
-                cutOptions: ['Small Pieces', 'Medium Pieces', 'Large Pieces'],
-                image: 'https://res.cloudinary.com/demo/image/upload/v1/curry_cut.jpg',
+                image: 'https://images.unsplash.com/photo-1587593810167-a84920ea0781?w=600',
                 images: [
-                    'https://res.cloudinary.com/demo/image/upload/v1/curry_cut.jpg',
-                    'https://res.cloudinary.com/demo/image/upload/v1/curry_cut_2.jpg',
-                    'https://res.cloudinary.com/demo/image/upload/v1/curry_cut_3.jpg',
-                    'https://res.cloudinary.com/demo/image/upload/v1/curry_cut_4.jpg'
+                    'https://images.unsplash.com/photo-1587593810167-a84920ea0781?w=600',
+                    'https://images.unsplash.com/photo-1604503468506-a8da13d11bea?w=600',
                 ],
-                deliveryTime: 18,
+                variations: [
+                    { label: '500g', basePrice: 120, cutOptions: ['Small Pieces', 'Medium Pieces', 'Large Pieces'] },
+                    { label: '1kg', basePrice: 230, cutOptions: ['Small Pieces', 'Medium Pieces', 'Large Pieces'] },
+                    { label: '2kg', basePrice: 440, cutOptions: ['Small Pieces', 'Medium Pieces', 'Large Pieces'] },
+                ],
+                createdBy: admin._id,
+                approved: true,
             },
             {
-                storeId: stores[0]._id,
                 categoryId: chickenCat._id,
                 name: 'Curry Cut (Skinless)',
                 description: 'Fresh • Cleaned • Cut After Order',
-                variants: [
-                    { weight: '500 g', price: 140, marketPrice: 160, inStock: true },
-                    { weight: '1 kg', price: 270, marketPrice: 320, inStock: true, bestValue: true },
+                image: 'https://images.unsplash.com/photo-1604503468506-a8da13d11bea?w=600',
+                variations: [
+                    { label: '500g', basePrice: 140, cutOptions: ['Small Pieces', 'Medium Pieces'] },
+                    { label: '1kg', basePrice: 270, cutOptions: ['Small Pieces', 'Medium Pieces'] },
+                    { label: '2kg', basePrice: 520, cutOptions: ['Small Pieces', 'Medium Pieces'] },
                 ],
-                cutOptions: ['Small Pieces', 'Medium Pieces'],
-                image: 'https://res.cloudinary.com/demo/image/upload/v1/curry_cut_skinless.jpg',
-                deliveryTime: 18,
+                createdBy: admin._id,
+                approved: true,
             },
             {
-                storeId: stores[0]._id,
                 categoryId: chickenCat._id,
                 name: 'Biryani Cut',
                 description: 'Fresh • Cleaned • Cut After Order',
-                variants: [
-                    { weight: '500 g', price: 130, marketPrice: 150, inStock: true },
-                    { weight: '1 kg', price: 250, marketPrice: 300, inStock: true, bestValue: true },
+                image: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600',
+                variations: [
+                    { label: '500g', basePrice: 130, cutOptions: ['Standard', 'Large'] },
+                    { label: '1kg', basePrice: 250, cutOptions: ['Standard', 'Large'] },
                 ],
-                cutOptions: ['Standard', 'Large'],
-                image: 'https://res.cloudinary.com/demo/image/upload/v1/biryani_cut.jpg',
-                deliveryTime: 20,
+                createdBy: admin._id,
+                approved: true,
             },
             {
-                storeId: stores[0]._id,
                 categoryId: chickenCat._id,
                 name: 'Drumsticks',
                 description: 'Fresh • Cleaned • Cut After Order',
-                variants: [
-                    { weight: '250 g', price: 150, marketPrice: 180, inStock: true },
-                    { weight: '500 g', price: 280, marketPrice: 340, inStock: true, bestValue: true },
+                image: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=600',
+                variations: [
+                    { label: '250g', basePrice: 150, cutOptions: [] },
+                    { label: '500g', basePrice: 280, cutOptions: [] },
                 ],
-                cutOptions: [],
-                image: 'https://res.cloudinary.com/demo/image/upload/v1/drumsticks.jpg',
-                deliveryTime: 18,
+                createdBy: admin._id,
+                approved: true,
             },
             {
-                storeId: stores[0]._id,
-                categoryId: bonelessCat._id,
-                name: 'Boneless (Breast)',
+                categoryId: chickenCat._id,
+                name: 'Whole Chicken',
                 description: 'Fresh • Cleaned • Cut After Order',
-                variants: [
-                    { weight: '250 g', price: 190, marketPrice: 220, inStock: true },
-                    { weight: '500 g', price: 360, marketPrice: 420, inStock: true, bestValue: true },
+                image: 'https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?w=600',
+                variations: [
+                    { label: '800g–1kg', basePrice: 220, cutOptions: ['Whole', 'Halved', 'Quartered'] },
+                    { label: '1kg–1.2kg', basePrice: 260, cutOptions: ['Whole', 'Halved', 'Quartered'] },
                 ],
-                cutOptions: ['Cubes', 'Strips'],
-                image: 'https://res.cloudinary.com/demo/image/upload/v1/boneless_breast.jpg',
-                images: [
-                    'https://res.cloudinary.com/demo/image/upload/v1/boneless_breast.jpg',
-                    'https://res.cloudinary.com/demo/image/upload/v1/boneless_breast_2.jpg',
-                    'https://res.cloudinary.com/demo/image/upload/v1/boneless_breast_3.jpg'
-                ],
-                deliveryTime: 20,
+                createdBy: admin._id,
+                approved: true,
             },
             {
-                storeId: stores[0]._id,
                 categoryId: bonelessCat._id,
-                name: 'Boneless (Thigh)',
+                name: 'Boneless Breast',
                 description: 'Fresh • Cleaned • Cut After Order',
-                variants: [
-                    { weight: '250 g', price: 170, marketPrice: 200, inStock: true },
-                    { weight: '500 g', price: 330, marketPrice: 390, inStock: true, bestValue: true },
+                image: 'https://images.unsplash.com/photo-1604503468506-a8da13d11bea?w=600',
+                variations: [
+                    { label: '250g', basePrice: 190, cutOptions: ['Cubes', 'Strips', 'Minced'] },
+                    { label: '500g', basePrice: 360, cutOptions: ['Cubes', 'Strips', 'Minced'] },
                 ],
-                cutOptions: ['Cubes', 'Strips'],
-                image: 'https://res.cloudinary.com/demo/image/upload/v1/boneless_thigh.jpg',
-                deliveryTime: 20,
+                createdBy: admin._id,
+                approved: true,
             },
             {
-                storeId: stores[0]._id,
+                categoryId: bonelessCat._id,
+                name: 'Boneless Thigh',
+                description: 'Fresh • Cleaned • Cut After Order',
+                image: 'https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?w=600',
+                variations: [
+                    { label: '250g', basePrice: 170, cutOptions: ['Cubes', 'Strips'] },
+                    { label: '500g', basePrice: 330, cutOptions: ['Cubes', 'Strips'] },
+                ],
+                createdBy: admin._id,
+                approved: true,
+            },
+            {
                 categoryId: marinatedCat._id,
                 name: 'Tandoori Marinated',
-                description: 'Fresh • Cleaned • Cut After Order',
-                variants: [
-                    { weight: '250 g', price: 210, marketPrice: 240, inStock: true },
-                    { weight: '500 g', price: 400, marketPrice: 480, inStock: true, bestValue: true },
+                description: 'Marinated with authentic spices • Ready to cook',
+                image: 'https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=600',
+                variations: [
+                    { label: '250g', basePrice: 210, cutOptions: ['Leg Pieces', 'Mixed'] },
+                    { label: '500g', basePrice: 400, cutOptions: ['Leg Pieces', 'Mixed'] },
                 ],
-                cutOptions: ['Leg Pieces', 'Mixed'],
-                image: 'https://res.cloudinary.com/demo/image/upload/v1/tandoori.jpg',
-                deliveryTime: 20,
+                createdBy: admin._id,
+                approved: true,
             },
             {
-                storeId: stores[0]._id,
+                categoryId: marinatedCat._id,
+                name: 'Lemon Herb Marinated',
+                description: 'Marinated with lemon & herbs • Ready to cook',
+                image: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=600',
+                variations: [
+                    { label: '250g', basePrice: 200, cutOptions: ['Breast', 'Thigh'] },
+                    { label: '500g', basePrice: 380, cutOptions: ['Breast', 'Thigh'] },
+                ],
+                createdBy: admin._id,
+                approved: true,
+            },
+            {
                 categoryId: eggsCat._id,
                 name: 'Farm Fresh Eggs',
-                description: 'Fresh • Cleaned • Cut After Order',
-                variants: [
-                    { weight: '6 pcs', price: 45, marketPrice: 55, inStock: true },
-                    { weight: '12 pcs', price: 85, marketPrice: 105, inStock: true, bestValue: true },
+                description: 'Farm fresh • Cleaned • Packed',
+                image: 'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=600',
+                variations: [
+                    { label: '6 pcs', basePrice: 45, cutOptions: [] },
+                    { label: '12 pcs', basePrice: 85, cutOptions: [] },
+                    { label: '30 pcs', basePrice: 200, cutOptions: [] },
                 ],
-                cutOptions: [],
-                image: 'https://res.cloudinary.com/demo/image/upload/v1/eggs.jpg',
-                deliveryTime: 15,
+                createdBy: admin._id,
+                approved: true,
             },
-        ]);
-        console.log(`✅ ${products.length} products created for ${stores[0].name}\n`);
+        ];
 
+        const products = await Product.insertMany(productsData);
+        console.log(`✅ ${products.length} products created in global catalog\n`);
+
+        // ── 8. VendorProduct overrides for Rajahmundry store ─────────────────
+        // This is what makes products visible with vendor-specific prices
+        const vendorOverrides = [];
+        for (const product of products) {
+            for (const variation of product.variations) {
+                vendorOverrides.push({
+                    vendorId: store._id,
+                    productId: product._id,
+                    variationLabel: variation.label,
+                    price: variation.basePrice, // same as base for now
+                    inStock: true,
+                    stockQty: 50,
+                    isActive: true,
+                });
+            }
+        }
+        await VendorProduct.insertMany(vendorOverrides);
+        console.log(`✅ ${vendorOverrides.length} vendor product overrides created\n`);
+
+        // ── Summary ──────────────────────────────────────────────────────────
         console.log('='.repeat(60));
-        console.log('✅ SEEDING COMPLETE!');
+        console.log('🎉 SEEDING COMPLETE!');
         console.log('='.repeat(60));
-        console.log('\n📋 LOGIN CREDENTIALS:');
-        console.log('\nAdmin:');
-        console.log('  Email: admin@mubarak.com');
-        console.log('  Password: admin123');
-        console.log('\nVendors:');
-        vendors.forEach((v, i) => {
-            console.log(`  ${i + 1}. ${v.email} (password: admin123) - ${stores[i].name}`);
-        });
-        console.log('\nDelivery Boys:');
-        console.log(`  Total: ${allDrivers.length} (phone-based login)`);
+        console.log('\n📋 LOGIN CREDENTIALS (all passwords: admin123)\n');
+        console.log('  Admin      : admin@mubarak.com');
+        console.log('  Vendor     : vendor@mubarak.com');
+        console.log('  Driver     : driver@mubarak.com');
+        console.log('\n🏪 STORE');
+        console.log(`  Name       : ${store.name}`);
+        console.log(`  Location   : Rajahmundry, AP 533101`);
+        console.log(`  Geo-fence  : ~6 km polygon around city center`);
+        console.log(`  Products   : ${products.length} items, ${vendorOverrides.length} variations`);
+        console.log('\n🧪 TEST NEARBY API:');
+        console.log('  GET /api/stores/nearby?lat=17.0005&lng=81.804');
         console.log('='.repeat(60));
 
         process.exit(0);
     } catch (error) {
-        console.error('❌ Seeding failed:', error.message);
+        console.error('\n❌ Seeding failed:', error.message);
         console.error(error);
         process.exit(1);
     }

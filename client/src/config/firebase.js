@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
@@ -26,5 +26,5 @@ if (firebaseConfig.apiKey) {
     console.warn('⚠️ Firebase API key missing — add VITE_FIREBASE_* vars to client/.env');
 }
 
-export { auth, googleProvider };
+export { auth, googleProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword };
 export default app;

@@ -10,8 +10,8 @@ module.exports = {
         env: {
             NODE_ENV: 'production',
             PORT: 5000,
-            MONGO_URI: 'mongodb://192.168.0.6:27017/mubarak_db',
-            CLIENT_URL: 'http://192.168.0.6'
+            MONGO_URI: process.env.MONGO_URI || 'mongodb://localhost:27017/mubarak_db',
+            CLIENT_URL: process.env.CLIENT_URL || 'http://localhost',
         },
         error_file: './logs/backend-error.log',
         out_file: './logs/backend-out.log',

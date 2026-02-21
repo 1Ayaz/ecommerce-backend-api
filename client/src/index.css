@@ -1,8 +1,27 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --primary: #D11243;
+  /* Premium Crimson */
+  --primary-hover: #b00f38;
+  --secondary: #15161D;
+  --bg-premium: #F8F9FB;
+  --slate-text: #4A4E69;
+
+  /* Instamart & Licious Functional Colors */
+  --instamart-positive: #00A16C;
+  --instamart-negative: #FA3C5A;
+  --instamart-blue-bg: #F0F5FA;
+  --instamart-border: rgba(0, 0, 0, 0.06);
+
+  --glass: rgba(255, 255, 255, 0.9);
+  --shadow-premium: 0 20px 40px rgba(0, 0, 0, 0.04), 0 1px 4px rgba(0, 0, 0, 0.02);
+  --shadow-high-trust: 0 30px 60px rgba(0, 0, 0, 0.08);
+}
 
 @layer utilities {
   .hide-scrollbar::-webkit-scrollbar {
@@ -14,23 +33,68 @@
     scrollbar-width: none;
   }
 
-  .shadow-glow {
-    box-shadow: 0 0 15px rgba(209, 44, 44, 0.4);
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .shadow-premium {
+    box-shadow: var(--shadow-premium);
+  }
+
+  .shadow-high-trust {
+    box-shadow: var(--shadow-high-trust);
+  }
+
+  .glass-card {
+    background: var(--glass);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
   }
 }
 
 /* ============ Global Styles ============ */
 body {
-  font-family: 'Poppins', sans-serif;
-  background-color: #F4F6FB;
-  color: #15161D;
+  font-family: 'Outfit', sans-serif;
+  background-color: var(--bg-premium);
+  color: var(--secondary);
   margin: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 /* ============ Custom Animations ============ */
-@keyframes slide-up {
+/* Instamart's precise v9UUS scale animation */
+@keyframes instamart-scale-in {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  25% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+
+  75% {
+    transform: scale(0.95);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-up-premium {
   from {
     transform: translateY(100%);
     opacity: 0;
@@ -42,7 +106,24 @@ body {
   }
 }
 
-@keyframes fade-in {
+.animate-instamart-add {
+  animation: instamart-scale-in 0.4s cubic-bezier(0.17, 0.67, 1, 0.46) forwards;
+}
+
+.animate-slide-up-premium {
+  animation: slide-up-premium 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* LoginSheet bottom sheet animation */
+.animate-slide-up {
+  animation: slide-up-premium 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-fade-in {
+  animation: fade-in-premium 0.3s ease-out;
+}
+
+@keyframes fade-in-premium {
   from {
     opacity: 0;
   }
@@ -52,25 +133,24 @@ body {
   }
 }
 
-.animate-slide-up {
-  animation: slide-up 0.2s ease-out;
+/* ============ Typography ============ */
+h1,
+h2,
+h3 {
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
-.animate-fade-in {
-  animation: fade-in 0.2s ease-out;
+.text-slate {
+  color: var(--slate-text);
 }
 
 /* ============ Scrollbar ============ */
 ::-webkit-scrollbar {
   width: 4px;
-  height: 4px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #8D99AE;
-  border-radius: 4px;
+  background: #CBD5E0;
+  border-radius: 10px;
 }

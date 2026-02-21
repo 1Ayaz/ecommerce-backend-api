@@ -1,52 +1,52 @@
 const asyncHandler = require('express-async-handler');
 
-// Ensure vendor/delivery can only access their own store's data
-const restrictToOwnStore = asyncHandler(async (req, res, next) => {
+// Ensure vendor/delivery can only access their own vendor's data
+const restrictToOwnVendor = asyncHandler(async (req, res, next) => {
     const user = req.user;
 
-    // Admin can access all stores
+    // Admin can access all vendors
     if (user.role === 'admin') {
         return next();
     }
 
-    // Vendor and delivery must have a storeId
+    // Vendor and delivery must have a vendorId
     if (['vendor', 'driver'].includes(user.role)) {
-        if (!user.storeId) {
+        if (!user.vendorId) {
             res.status(403);
-            throw new Error('User is not assigned to any store');
+            throw new Error('User is not assigned to any vendor');
         }
 
-        // Attach storeId to request for easy access in controllers
-        req.userStoreId = user.storeId.toString();
+        // Attach vendorId to request for easy access in controllers
+        req.userVendorId = user.vendorId.toString();
         return next();
     }
 
-    // Customers don't need store restriction
+    // Customers don't need vendor restriction
     next();
 });
 
-// Verify that the requested resource belongs to user's store
-const verifyStoreOwnership = (resourceStoreIdField = 'storeId') => {
+// Verify that the requested resource belongs to user's vendor
+const verifyVendorOwnership = (resourceVendorIdField = 'vendorId') => {
     return asyncHandler(async (req, res, next) => {
         const user = req.user;
 
-        // Admin bypasses check
+        // Admin bypass check
         if (user.role === 'admin') {
             return next();
         }
 
-        // For vendor/driver, verify store ownership
+        // For vendor/driver, verify vendor ownership
         if (['vendor', 'driver'].includes(user.role)) {
-            const resourceStoreId = req.params[resourceStoreIdField] || req.body[resourceStoreIdField];
+            const resourceVendorId = req.params[resourceVendorIdField] || req.body[resourceVendorIdField];
 
-            if (!resourceStoreId) {
+            if (!resourceVendorId) {
                 res.status(400);
-                throw new Error('Store ID is required');
+                throw new Error('Vendor ID is required');
             }
 
-            if (resourceStoreId !== user.storeId.toString()) {
+            if (resourceVendorId.toString() !== user.vendorId.toString()) {
                 res.status(403);
-                throw new Error('Access denied: Resource belongs to different store');
+                throw new Error('Access denied: Resource belongs to different vendor');
             }
         }
 
@@ -54,4 +54,4 @@ const verifyStoreOwnership = (resourceStoreIdField = 'storeId') => {
     });
 };
 
-module.exports = { restrictToOwnStore, verifyStoreOwnership };
+module.exports = { restrictToOwnVendor, verifyVendorOwnership };
