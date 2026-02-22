@@ -79,7 +79,8 @@ export default function OrderSuccess() {
         const localToken = localStorage.getItem('mubarak_token') || token;
         if (!orderId || !localToken) return;
 
-        const socketUrl = import.meta.env.VITE_API_BASE_URL || window.location.origin.replace('5173', '5000');
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const socketUrl = import.meta.env.VITE_API_BASE_URL || (isLocal ? 'http://localhost:5000' : 'https://ecommerce-backend-api-qzgf.onrender.com');
         const socket = io(socketUrl, {
             auth: { token: localToken },
             transports: ['websocket', 'polling']

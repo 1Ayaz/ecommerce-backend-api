@@ -69,7 +69,6 @@ const updateDeliveryStatus = asyncHandler(async (req, res) => {
             throw new Error('Invalid Delivery PIN');
         }
     }
-
     const messages = {
         'picked_up': 'Order picked up by delivery partner',
         'out_for_delivery': 'Your delivery partner is on the way',

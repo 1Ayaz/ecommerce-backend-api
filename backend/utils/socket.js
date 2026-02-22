@@ -28,7 +28,7 @@ const initSocket = (server) => {
         }
     });
 
-    io.on('connection', (socket) => {
+    io.on('connection', async (socket) => {
         console.log(`🔌 Authenticated connection: ${socket.id} (user: ${socket.userId})`);
 
         // Auto-join user's own room
@@ -36,6 +36,20 @@ const initSocket = (server) => {
         if (socket.userRole === 'admin') {
             socket.join('admin');
             console.log(`🛡️ Admin ${socket.userId} joined global tracking room`);
+        }
+
+        // Add this fix: If they are a vendor or driver, find their Store ID and join that room too!
+        if (socket.userRole === 'vendor') {
+            try {
+                const User = require('../models/User'); // Import your User model
+                const user = await User.findById(socket.userId);
+                if (user && user.vendorId) { // vendorId on the User model holds the Store._id
+                    socket.join(user.vendorId.toString());
+                    console.log(`🏪 Vendor ${socket.userId} joined Store room ${user.vendorId}`);
+                }
+            } catch (err) {
+                console.error("Failed to join Store room:", err);
+            }
         }
 
         // Allow joining vendor room only if the user has a valid reason

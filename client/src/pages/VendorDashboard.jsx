@@ -48,6 +48,10 @@ export default function VendorDashboard() {
 
         socket.on('connect', () => {
             console.log('🔗 Vendor/Admin Real-time connected');
+            if (user?.vendorId) {
+                socket.emit('join', user.vendorId);
+                console.log(`📡 Joined vendor room: ${user.vendorId}`);
+            }
         });
 
         socket.on('new-order', (data) => {
