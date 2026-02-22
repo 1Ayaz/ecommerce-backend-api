@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavig
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import useAuthStore from './store/useAuthStore';
 import API from './config/api';
 import Header from './components/Header';
@@ -242,6 +243,7 @@ function App() {
           serviceUnavailable={serviceUnavailable}
           setServiceUnavailable={setServiceUnavailable}
         />
+        <SpeedInsights />
       </ErrorBoundary>
     </Router>
   );
