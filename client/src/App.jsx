@@ -223,12 +223,29 @@ function AppContent({ locationData, setLocationData, showLocationPicker, setShow
 
 function App() {
   const [locationData, setLocationData] = useState(() => {
-    const saved = localStorage.getItem('userLocation');
     try {
-      return saved ? JSON.parse(saved) : null;
+      const savedLoc = localStorage.getItem('userLocation');
+      if (savedLoc) return JSON.parse(savedLoc);
+
+      // Try falling back to user's saved addresses to avoid popup flash
+      const savedUserStr = localStorage.getItem('mubarak_user');
+      if (savedUserStr) {
+        const parsedUser = JSON.parse(savedUserStr);
+        if (parsedUser?.savedAddresses?.length > 0) {
+          const firstAddr = parsedUser.savedAddresses[0];
+          const locData = {
+            lat: firstAddr.lat,
+            lng: firstAddr.lng,
+            formattedAddress: firstAddr.fullAddress || firstAddr.area
+          };
+          localStorage.setItem('userLocation', JSON.stringify(locData));
+          return locData;
+        }
+      }
     } catch (e) {
-      return null;
+      console.error("Error parsing location fallback:", e);
     }
+    return null;
   });
 
   const [showLocationPicker, setShowLocationPicker] = useState(() => {
