@@ -53,6 +53,174 @@ function calcDeliveryFeeFromSlabs(distanceKm, slabs, freeDeliveryAboveAmount, or
 
 class OrderService {
     /**
+     * Preview Order — calculates fees and totals without checking out or deducting stock.
+     */
+    static async previewOrder(orderData, customerId) {
+        const { vendorId, items, deliveryAddress, paymentMethod, couponCode } = orderData;
+
+        // ── 1. Load global settings (payment toggles + tax + platform fee) ────
+        let settings = await Settings.findOne().lean();
+        if (!settings) {
+            settings = { paymentMethods: { codEnabled: true, mockUpiEnabled: true }, taxRate: 0, platformServiceFee: 0 };
+        }
+
+        // ── 2. Validate payment method ────────────────────────────────────────
+        const payMethod = (paymentMethod || 'COD').toUpperCase();
+        const toggleField = PAYMENT_TOGGLE_MAP[payMethod];
+        if (!toggleField) {
+            throw new ApiError(400, `Invalid payment method: ${paymentMethod}`);
+        }
+        if (!settings.paymentMethods?.[toggleField]) {
+            throw new ApiError(400, `Payment method '${paymentMethod}' is currently disabled.`);
+        }
+
+        // ── 3. Verify vendor (Store) ──────────────────────────────────────────
+        const vendor = await Store.findById(vendorId);
+        if (!vendor) throw new ApiError(404, 'Vendor not found');
+        if (!vendor.isActive) throw new ApiError(400, 'This store is currently inactive');
+        if (!vendor.isOpen) throw new ApiError(400, 'This store is currently closed');
+
+        // ── 4. Geo-fence validation ───────────────────────────────────────────
+        if (deliveryAddress?.location?.lat && deliveryAddress?.location?.lng) {
+            const lat = parseFloat(deliveryAddress.location.lat);
+            const lng = parseFloat(deliveryAddress.location.lng);
+
+            if (!isNaN(lat) && !isNaN(lng)) {
+                const isServiceable = await Store.findOne({
+                    _id: vendorId,
+                    serviceArea: {
+                        $geoIntersects: {
+                            $geometry: { type: 'Point', coordinates: [lng, lat] }
+                        }
+                    }
+                });
+                if (!isServiceable) {
+                    throw new ApiError(400, 'Your delivery address is outside this store\'s serviceable area');
+                }
+            }
+        }
+
+        // ── 5. Validate items, calculate itemsTotal ───────────────────────────
+        let itemsTotal = 0;
+        const validatedItems = [];
+
+        for (const item of items) {
+            if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
+                throw new ApiError(400, `Invalid quantity for product ${item.productId}`);
+            }
+
+            const product = await Product.findById(item.productId);
+            if (!product) throw new ApiError(400, `Product ${item.productId} not found`);
+
+            const globalVariant = product.variations.find(v => v.label === item.variationLabel);
+            if (!globalVariant) {
+                throw new ApiError(400, `Variation '${item.variationLabel}' for ${product.name} not found`);
+            }
+
+            const override = await VendorProduct.findOne({
+                vendorId,
+                productId: item.productId,
+                variationLabel: item.variationLabel,
+                isActive: true
+            });
+
+            const finalPrice = override ? override.price : globalVariant.basePrice;
+            const inStock = override ? override.inStock : true;
+
+            if (!inStock) {
+                throw new ApiError(400, `${product.name} (${item.variationLabel}) is out of stock`);
+            }
+
+            if (override && override.stockQty !== undefined && override.stockQty < item.quantity) {
+                throw new ApiError(400, `Only ${override.stockQty} units available for ${product.name} (${item.variationLabel})`);
+            }
+
+            itemsTotal += finalPrice * item.quantity;
+        }
+
+        // ── 6. Calculate delivery fee from store slab ─────────────────────────
+        let deliveryFee = 0;
+        const cfg = vendor.deliveryConfig;
+        if (cfg?.deliverySlabs?.length > 0) {
+            let distanceKm = 0;
+            try {
+                if (deliveryAddress?.location?.lat && vendor.location?.coordinates?.length === 2) {
+                    const result = await MapService.getDistanceKm(
+                        { lat: parseFloat(deliveryAddress.location.lat), lng: parseFloat(deliveryAddress.location.lng) },
+                        { lat: vendor.location.coordinates[1], lng: vendor.location.coordinates[0] }
+                    );
+                    distanceKm = result ?? 0;
+                }
+            } catch {
+                distanceKm = 0;
+            }
+            deliveryFee = calcDeliveryFeeFromSlabs(
+                distanceKm,
+                cfg.deliverySlabs,
+                cfg.freeDeliveryAboveAmount,
+                itemsTotal,
+                cfg.freeDeliveryRadiusKm
+            );
+        }
+
+        // ── 7. Calculate tax and platform fee ─────────────────────────────────
+        const taxRate = settings.taxRate ?? 0;
+        const taxAmount = Math.round((itemsTotal * taxRate) / 100 * 100) / 100;
+        const platformFee = settings.platformServiceFee ?? 0;
+
+        // ── 8. Validate & apply coupon ───────────────────────────────────────
+        let discountAmount = 0;
+        let appliedCouponCode = null;
+        if (couponCode) {
+            const coupon = await Coupon.findOne({
+                code: couponCode.toUpperCase(),
+                storeId: vendorId,
+                isActive: true,
+                expirationDate: { $gte: new Date() }
+            });
+
+            if (!coupon) {
+                throw new ApiError(400, 'Coupon is invalid, expired, or does not apply to this store');
+            }
+            if (coupon.usageLimit !== null && coupon.usedCount >= coupon.usageLimit) {
+                throw new ApiError(400, 'Coupon usage limit has been reached');
+            }
+            if (itemsTotal < coupon.minOrderAmount) {
+                throw new ApiError(400, `Minimum order amount of ₹${coupon.minOrderAmount} required`);
+            }
+
+            if (coupon.discountType === 'percentage') {
+                discountAmount = (itemsTotal * coupon.discountValue) / 100;
+                if (coupon.maxDiscountAmount) {
+                    discountAmount = Math.min(discountAmount, coupon.maxDiscountAmount);
+                }
+            } else {
+                discountAmount = coupon.discountValue;
+            }
+
+            discountAmount = Math.min(discountAmount, itemsTotal);
+            discountAmount = Math.round(discountAmount * 100) / 100;
+            appliedCouponCode = coupon.code;
+        }
+
+        // ── 9. Final grand total ─────────────────────────────────────────────
+        const grandTotal = Math.round(
+            (itemsTotal - discountAmount + deliveryFee + taxAmount + platformFee) * 100
+        ) / 100;
+
+        return {
+            financialSnapshot: {
+                itemsTotal,
+                deliveryFee,
+                platformFee,
+                taxAmount,
+                discountAmount,
+                grandTotal
+            },
+            appliedCouponCode
+        };
+    }
+    /**
      * Place Order — single point of financial truth
      * All fees calculated here, locked in financialSnapshot, never recalculated.
      */

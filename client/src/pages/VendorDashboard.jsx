@@ -40,7 +40,8 @@ export default function VendorDashboard() {
         const token = localStorage.getItem('mubarak_token');
         if (!token) return;
 
-        const socketUrl = import.meta.env.VITE_API_BASE_URL || window.location.origin.replace('5173', '5000');
+        const envUrl = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/api\/?$/, '');
+        const socketUrl = envUrl || window.location.origin.replace('5173', '5000');
         const socket = io(socketUrl, {
             auth: { token },
             transports: ['websocket', 'polling']

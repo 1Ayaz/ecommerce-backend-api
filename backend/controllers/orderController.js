@@ -13,6 +13,17 @@ const placeOrder = asyncHandler(async (req, res) => {
     res.status(201).json({ success: true, data: order });
 });
 
+// @desc    Preview an order (calculate fees without saving)
+// @route   POST /api/orders/preview
+const previewOrder = asyncHandler(async (req, res) => {
+    if (req.user.role !== 'customer') {
+        res.status(403);
+        throw new Error('Only customers can preview orders');
+    }
+    const previewData = await OrderService.previewOrder(req.body, req.user._id);
+    res.status(200).json({ success: true, data: previewData });
+});
+
 // @desc    Get all orders (admin only)
 // @route   GET /api/orders
 const getAllOrders = asyncHandler(async (req, res) => {
@@ -116,4 +127,5 @@ module.exports = {
     updateOrderStatus,
     getVendorOrders,
     assignDriver,
+    previewOrder,
 };

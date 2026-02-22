@@ -89,23 +89,36 @@ function AppContent({ locationData, setLocationData, showLocationPicker, setShow
     }
   }, [user]);
 
+  const handleLocationSet = (data) => {
+    setLocationData(data);
+    setShowLocationPicker(false);
+    localStorage.setItem('userLocation', JSON.stringify(data));
+  };
+
   useEffect(() => {
     if (user?._id) {
       subscribeToPushNotifications();
-      // Sync fresh profile from API on mount - runs once because dependency is ID, not object
-      fetchProfile();
+      // Sync fresh profile from API on mount
+      const syncProfile = async () => {
+        const freshUser = await fetchProfile();
+        // Location Popup Fix: If user has saved addresses and hasn't manually set a location, auto-select the first one
+        if (freshUser?.savedAddresses?.length > 0 && !localStorage.getItem('userLocation')) {
+          const firstAddr = freshUser.savedAddresses[0];
+          const locData = {
+            lat: firstAddr.lat,
+            lng: firstAddr.lng,
+            formattedAddress: firstAddr.fullAddress || firstAddr.area
+          };
+          handleLocationSet(locData);
+        }
+      };
+      syncProfile();
     }
   }, [user?._id]);
 
   const isDashboardRoute = ['/dashboard', '/delivery', '/staff-login'].some(p => location.pathname.startsWith(p));
   const isCheckoutRoute = ['/checkout', '/payment'].includes(location.pathname);
   const isTabPage = ['/search', '/categories', '/account'].includes(location.pathname);
-
-  const handleLocationSet = (data) => {
-    setLocationData(data);
-    setShowLocationPicker(false);
-    localStorage.setItem('userLocation', JSON.stringify(data));
-  };
 
   const handleServiceUnavailable = () => {
     setServiceUnavailable(true);

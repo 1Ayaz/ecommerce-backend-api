@@ -54,6 +54,10 @@ export default function Checkout() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
+    // Order Preview State
+    const [previewLoading, setPreviewLoading] = useState(false);
+    const [financialSnapshot, setFinancialSnapshot] = useState(null);
+
     // ─── Autofill Address from Global Location ───
     const handlePrefillGlobalLocation = async () => {
         const savedLocStr = localStorage.getItem('userLocation');
@@ -135,15 +139,67 @@ export default function Checkout() {
     const hasHome = savedAddresses.some(a => a.label === 'Home');
     const hasWork = savedAddresses.some(a => a.label === 'Work');
 
-    // Billing
-    const subtotal = getTotalPrice();
-    const discount = appliedCoupon ? appliedCoupon.discountAmount : 0;
+    // ─── Fetch Preview Totals from Backend ───
+    useEffect(() => {
+        if (!user || items.length === 0 || !vendorId) return;
 
-    // Delivery fee is calculated server-side based on store's delivery slabs + distance.
-    // Show 0 on checkout — backend is the single source of truth for final amounts.
-    const deliveryFee = 0;
-    const handlingFee = 0;
-    const grandTotal = subtotal - discount + deliveryFee;
+        let isMounted = true;
+        const fetchPreview = async () => {
+            setPreviewLoading(true);
+            try {
+                // Determine best location
+                let loc = null;
+                if (selectedAddr?.location?.lat) {
+                    loc = selectedAddr.location;
+                } else if (gpsLocation?.lat) {
+                    loc = gpsLocation;
+                } else {
+                    const localLoc = JSON.parse(localStorage.getItem('userLocation') || '{}');
+                    if (localLoc.lat) loc = localLoc;
+                }
+
+                const orderData = {
+                    vendorId,
+                    items: items.map(i => ({
+                        productId: i.productId,
+                        variationLabel: i.variationLabel,
+                        quantity: i.quantity,
+                    })),
+                    deliveryAddress: selectedAddr || { location: loc || { lat: 0, lng: 0 } },
+                    paymentMethod: 'COD', // For preview purposes
+                    couponCode: appliedCoupon?.couponCode || couponCode || null,
+                };
+
+                const { data } = await API.post('/orders/preview', orderData);
+                if (isMounted && data?.success) {
+                    setFinancialSnapshot(data.data.financialSnapshot);
+                    // Sync backend validated coupon if mismatched
+                    if (data.data.appliedCouponCode && !appliedCoupon) {
+                        setAppliedCoupon({ discountAmount: data.data.financialSnapshot.discountAmount, couponCode: data.data.appliedCouponCode });
+                    } else if (!data.data.appliedCouponCode && appliedCoupon) {
+                        setAppliedCoupon(null);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to preview order", err);
+            } finally {
+                if (isMounted) setPreviewLoading(false);
+            }
+        };
+
+        const t = setTimeout(fetchPreview, 400); // 400ms debounce
+        return () => { isMounted = false; clearTimeout(t); };
+    }, [items, selectedAddr, appliedCoupon, vendorId, gpsLocation]);
+
+    // Billing
+    const subtotal = financialSnapshot?.itemsTotal ?? getTotalPrice();
+    const discount = financialSnapshot?.discountAmount ?? (appliedCoupon ? appliedCoupon.discountAmount : 0);
+    const deliveryFee = financialSnapshot?.deliveryFee ?? 0;
+    const platformFee = financialSnapshot?.platformFee ?? 0;
+    const taxAmount = financialSnapshot?.taxAmount ?? 0;
+
+    const handlingFee = platformFee + taxAmount;
+    const grandTotal = financialSnapshot?.grandTotal ?? (subtotal - discount + deliveryFee + handlingFee);
 
     // ─── Coupon Logic ───
     const handleApplyCoupon = async () => {
@@ -424,29 +480,40 @@ export default function Checkout() {
                 </section>
 
                 {/* ─── Bill Details ─── */}
-                <section className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                <section className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 relative">
+                    {previewLoading && (
+                        <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-10 rounded-2xl flex items-center justify-center">
+                            <Loader2 className="animate-spin text-[#D11243]" size={24} />
+                        </div>
+                    )}
                     <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Bill Details</h3>
                     <div className="space-y-3 text-sm">
                         <div className="flex justify-between">
                             <span className="text-slate-500">Item Total</span>
-                            <span className="font-bold text-secondary">₹{subtotal}</span>
+                            <span className="font-bold text-secondary">₹{subtotal.toFixed(2)}</span>
                         </div>
-                        {appliedCoupon && (
+                        {discount > 0 && (
                             <div className="flex justify-between text-emerald-600">
                                 <span>Coupon Discount</span>
-                                <span className="font-bold">-₹{discount}</span>
+                                <span className="font-bold">-₹{discount.toFixed(2)}</span>
                             </div>
                         )}
                         <div className="flex justify-between">
                             <span className="text-slate-500">Delivery Fee</span>
                             <span className={`font-bold ${deliveryFee === 0 ? 'text-emerald-600' : 'text-secondary'}`}>
-                                {deliveryFee === 0 ? 'FREE' : `₹${deliveryFee}`}
+                                {deliveryFee === 0 ? 'FREE' : `₹${deliveryFee.toFixed(2)}`}
                             </span>
                         </div>
+                        {handlingFee > 0 && (
+                            <div className="flex justify-between">
+                                <span className="text-slate-500">Taxes & Platform Fees</span>
+                                <span className="font-bold text-secondary">₹{handlingFee.toFixed(2)}</span>
+                            </div>
+                        )}
 
                         <div className="border-t border-dashed border-gray-200 pt-3 flex justify-between">
                             <span className="font-bold text-secondary text-base">Grand Total</span>
-                            <span className="font-black text-secondary text-base">₹{grandTotal}</span>
+                            <span className="font-black text-secondary text-base">₹{grandTotal.toFixed(2)}</span>
                         </div>
                     </div>
                 </section>
@@ -459,9 +526,12 @@ export default function Checkout() {
                 <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
                     <div>
                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total</p>
-                        <p className="text-xl font-black text-secondary">₹{grandTotal}</p>
+                        <p className="text-xl font-black text-secondary">
+                            {previewLoading ? <span className="opacity-0">₹0</span> : `₹${grandTotal.toFixed(2)}`}
+                            {previewLoading && <Loader2 className="absolute ml-1 animate-spin text-slate-300 inline" size={18} style={{ marginTop: '2px' }} />}
+                        </p>
                     </div>
-                    <button onClick={handleMakePayment} disabled={loading}
+                    <button onClick={handleMakePayment} disabled={loading || previewLoading}
                         className="bg-[#D11243] text-white font-bold px-8 py-4 rounded-2xl shadow-lg shadow-red-200/40 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50">
                         {loading ? <Loader2 className="animate-spin" size={18} /> : <>Make Payment <ArrowRight size={18} /></>}
                     </button>

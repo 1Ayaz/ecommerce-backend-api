@@ -8,6 +8,7 @@ const {
     updateOrderStatus,
     getVendorOrders,
     assignDriver,
+    previewOrder,
 } = require('../controllers/orderController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 const { restrictToOwnVendor } = require('../middleware/storeMiddleware');
@@ -21,6 +22,7 @@ router.get('/', protect, authorize('admin'), getAllOrders);
 router.get('/vendor/store-orders', protect, authorize('vendor'), restrictToOwnVendor, getVendorOrders);
 
 // Customer routes
+router.post('/preview', protect, orderLimiter, validateOrderCreation, previewOrder);
 router.post('/', protect, orderLimiter, validateOrderCreation, placeOrder);
 router.get('/history', protect, getOrderHistory);
 
