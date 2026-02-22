@@ -155,7 +155,7 @@ const useAuthStore = create((set) => ({
     logout: () => {
         localStorage.removeItem('mubarak_token');
         localStorage.removeItem('mubarak_user');
-        localStorage.removeItem('mubarak_location');
+        localStorage.removeItem('userLocation');
         set({ user: null, token: null });
     },
 

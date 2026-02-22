@@ -292,8 +292,11 @@ export default function Checkout() {
                 deliveryInstructions: addrInstructions.trim(),
             });
             toast.success('Address saved!');
-            // Reload addresses
-            const res = await API.get('/users/addresses');
+            // Reload addresses and global user profile to update localStorage cache
+            const [res] = await Promise.all([
+                API.get('/users/addresses'),
+                useAuthStore.getState().fetchProfile()
+            ]);
             const addrs = res.data.data || [];
             setSavedAddresses(addrs);
             const newAddr = addrs[addrs.length - 1];

@@ -76,6 +76,7 @@ export default function CustomerDashboard() {
         try {
             await API.delete(`/users/addresses/${id}`);
             setAddresses(prev => prev.filter(a => a._id !== id));
+            useAuthStore.getState().fetchProfile(); // Keep global map sync updated
             toast.success('Address deleted');
         } catch { toast.error('Could not delete address'); }
     };
@@ -138,7 +139,10 @@ export default function CustomerDashboard() {
             toast.success('Address saved!');
             setShowAddAddress(false);
             setNewAddr({ label: 'Home', name: '', phone: '', flat: '', building: '', area: '', landmark: '', city: '', state: '', pincode: '' });
-            const res = await API.get('/users/addresses');
+            const [res] = await Promise.all([
+                API.get('/users/addresses'),
+                useAuthStore.getState().fetchProfile() // Synchronize localStorage
+            ]);
             setAddresses(res.data.data || []);
         } catch { toast.error('Failed to save address'); }
     };
