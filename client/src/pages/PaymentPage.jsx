@@ -10,7 +10,6 @@ import { toast } from 'react-toastify';
 // Map backend toggle keys to display config
 const PAYMENT_CONFIG = {
     codEnabled: { id: 'COD', label: 'Cash on Delivery', sub: 'Pay when your order arrives', icon: Banknote },
-    mockUpiEnabled: { id: 'MOCK_UPI', label: 'UPI (Test Mode)', sub: 'Auto-confirms for testing', icon: Smartphone },
     upiEnabled: { id: 'UPI', label: 'Pay via UPI', sub: 'BHIM, PhonePe, GPay, etc.', icon: Smartphone },
     cardEnabled: { id: 'CARD', label: 'Credit / Debit Card', sub: 'Visa, Mastercard, RuPay', icon: CreditCard },
     walletEnabled: { id: 'WALLET', label: 'Wallet', sub: 'Paytm, Amazon Pay, etc.', icon: Wallet },
@@ -113,6 +112,7 @@ export default function PaymentPage() {
                     lng: deliveryAddress.lng || deliveryAddress.location?.lng || null,
                 },
                 paymentMethod,
+                expectedTotal: grandTotal,
                 specialInstructions: specialInstructions || '',
                 couponCode: couponCode || null,
             };

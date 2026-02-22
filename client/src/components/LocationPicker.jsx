@@ -90,9 +90,10 @@ export default function LocationPicker({ onLocationSet, onServiceUnavailable, on
                 setResolvedCoords({ lat, lng });
                 try {
                     const res = await API.get(`/location/reverse-geocode?lat=${lat}&lng=${lng}`);
-                    setResolvedAddress(res.data.data.formattedAddress);
+                    const formatted = res.data?.data?.formattedAddress;
+                    setResolvedAddress(formatted || '');
                 } catch {
-                    setResolvedAddress(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+                    setResolvedAddress('');
                 }
                 setLoading(false);
             },

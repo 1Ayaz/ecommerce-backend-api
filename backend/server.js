@@ -94,8 +94,8 @@ initSocket(server);
 
 // Only start server if not in test mode
 if (process.env.NODE_ENV !== 'test') {
-    server.listen(PORT, () => {
-        console.log(`🚀 Mubarak API & Real-time Server running on port ${PORT}`);
+    server.listen(PORT, '0.0.0.0', () => {
+        console.log(`🚀 Mubarak API & Real-time Server running on port ${PORT} (0.0.0.0)`);
     });
 }
 

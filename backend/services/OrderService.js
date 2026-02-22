@@ -57,7 +57,7 @@ class OrderService {
      * All fees calculated here, locked in financialSnapshot, never recalculated.
      */
     static async placeOrder(orderData, customerId) {
-        const { vendorId, items, deliveryAddress, paymentMethod, couponCode, specialInstructions } = orderData;
+        const { vendorId, items, deliveryAddress, paymentMethod, couponCode, specialInstructions, expectedTotal } = orderData;
 
         // ── 1. Load global settings (payment toggles + tax + platform fee) ────
         let settings = await Settings.findOne().lean();
@@ -108,6 +108,10 @@ class OrderService {
         const stockUpdates = []; // track for atomic deduction
 
         for (const item of items) {
+            if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
+                throw new ApiError(400, `Invalid quantity for product ${item.productId}`);
+            }
+
             const product = await Product.findById(item.productId);
             if (!product) throw new ApiError(400, `Product ${item.productId} not found`);
 
@@ -247,6 +251,13 @@ class OrderService {
             (itemsTotal - discountAmount + deliveryFee + taxAmount + platformFee) * 100
         ) / 100;
 
+        // ── 11a. Price Trust Sync ─────────────────────────────────────────────
+        if (expectedTotal !== undefined && expectedTotal !== null) {
+            if (Math.abs(grandTotal - expectedTotal) > 1) { // 1 rupee tolerance
+                throw new ApiError(400, 'Price changed during checkout. Please refresh your cart and try again.');
+            }
+        }
+
         // ── 11b. Delivery boy fee (store-configured, not charged to customer) ──
         const deliveryBoyFee = cfg?.deliveryBoyFeePerOrder ?? 30;
 
@@ -340,7 +351,7 @@ class OrderService {
     /**
      * Update order status with forward-only transition guard
      */
-    static async updateStatus(orderId, status, driverId, user) {
+    static async updateStatus(orderId, status, driverId, user, otp) {
         const order = await Order.findById(orderId).populate('customerId', 'name phone');
         if (!order) throw new ApiError(404, 'Order not found');
 
@@ -360,6 +371,13 @@ class OrderService {
             throw new ApiError(400,
                 `Cannot transition from '${order.status}' to '${status}'. Allowed: [${allowedNext.join(', ') || 'none'}]`
             );
+        }
+
+        // ── Delivery OTP Check ────────────────────────────────────────────────
+        if (status === 'delivered') {
+            if (!otp || order.deliveryPin !== otp) {
+                throw new ApiError(400, 'Invalid Delivery PIN (OTP). Cannot mark as delivered.');
+            }
         }
 
         const messages = {

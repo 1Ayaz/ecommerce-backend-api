@@ -6,11 +6,20 @@ const useCartStore = create((set, get) => ({
 
     // Add item to cart (product + variation — no cut selection)
     addItem: (product, variation) => {
-        const items = get().items;
+        let items = get().items;
         const variationLabel = variation.label;
         const price = variation.discountedPrice || variation.price || variation.basePrice;
-        // VendorId: from product, from existing cart items, or from localStorage
-        const currentVendorId = product.vendorId || product.storeId || get().vendorId || localStorage.getItem('mubarak_vendorId');
+
+        // Multi-Vendor Fix: Identify if the incoming product belongs to a new vendor
+        const itemVendorId = product.vendorId || product.storeId;
+        const existingVendorId = get().vendorId || localStorage.getItem('mubarak_vendorId');
+
+        // If cart is not empty and the vendor changed, wipe the cart
+        if (items.length > 0 && itemVendorId && existingVendorId && itemVendorId !== existingVendorId) {
+            items = [];
+        }
+
+        const activeVendorId = itemVendorId || existingVendorId;
 
         const cartKey = `${product._id}_${variationLabel}`;
         const existing = items.find((i) => i.cartKey === cartKey);
@@ -32,17 +41,16 @@ const useCartStore = create((set, get) => ({
                     image: product.image,
                     weightLabel: variationLabel,
                     quantity: 1,
-                    vendorId: currentVendorId,
+                    vendorId: activeVendorId,
                 },
             ];
         }
 
         localStorage.setItem('mubarak_cart', JSON.stringify(newItems));
-        // Only update vendorId if we have a real value
-        if (currentVendorId) {
-            localStorage.setItem('mubarak_vendorId', currentVendorId);
+        if (activeVendorId) {
+            localStorage.setItem('mubarak_vendorId', activeVendorId);
         }
-        set({ items: newItems, vendorId: currentVendorId || get().vendorId });
+        set({ items: newItems, vendorId: activeVendorId });
     },
 
     // Remove item

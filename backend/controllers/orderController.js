@@ -81,8 +81,8 @@ const getOrderById = asyncHandler(async (req, res) => {
 // @desc    Update order status (vendor/admin)
 // @route   PUT /api/orders/:id/status
 const updateOrderStatus = asyncHandler(async (req, res) => {
-    const { status, driverId } = req.body;
-    const updated = await OrderService.updateStatus(req.params.id, status, driverId, req.user);
+    const { status, driverId, otp } = req.body;
+    const updated = await OrderService.updateStatus(req.params.id, status, driverId, req.user, otp);
     res.status(200).json({ success: true, data: updated });
 });
 

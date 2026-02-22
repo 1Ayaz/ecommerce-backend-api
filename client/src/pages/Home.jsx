@@ -165,7 +165,7 @@ export default function Home({ locationData }) {
                     </div>
 
                     {/* Horizontal scroll on both mobile and desktop */}
-                    <div className="flex gap-3 md:gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory -mx-4 px-4 md:-mx-8 md:px-8">
+                    <div className="flex gap-3 md:gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory py-2">
                         {bestSellers.map((product) => (
                             <div key={product._id} className="w-[58vw] md:w-[300px] flex-shrink-0 snap-start">
                                 <ChickenProduct product={product} onShowVariations={handleShowVariations} />
@@ -253,7 +253,7 @@ export default function Home({ locationData }) {
                                 <p className="text-slate-500 text-xs">Save more on every order</p>
                             </div>
                         </div>
-                        <div className="flex gap-3 overflow-x-auto pb-3 scrollbar-hide snap-x snap-mandatory -mx-4 px-4 md:-mx-8 md:px-8">
+                        <div className="flex gap-3 overflow-x-auto pb-3 scrollbar-hide snap-x snap-mandatory py-2">
                             {storeCoupons.map((coupon, i) => (
                                 <button key={i}
                                     onClick={() => { navigator.clipboard.writeText(coupon.code); }}
@@ -281,7 +281,7 @@ export default function Home({ locationData }) {
                             Google Reviews 4.8★
                         </div>
                     </div>
-                    <div className="flex gap-3 md:gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory -mx-4 px-4 md:-mx-8 md:px-8">
+                    <div className="flex gap-3 md:gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory py-2">
                         {reviews.map((review, i) => (
                             <div key={i} className="w-[80vw] md:w-96 flex-shrink-0 snap-start">
                                 <ReviewCard review={review} />
