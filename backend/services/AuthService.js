@@ -34,14 +34,29 @@ class AuthService {
             throw new ApiError(401, 'Invalid Firebase ID token');
         }
 
-        const { uid, email, name, picture } = decodedToken;
-        let user = await User.findOne({ firebaseUid: uid });
+        const { uid, email, name, picture, phone_number } = decodedToken;
+
+        let user;
+
+        // Try to find user by firebaseUid first
+        user = await User.findOne({ firebaseUid: uid });
+
+        // If not found by UID, but we have a phone number, try to find by phone
+        if (!user && phone_number) {
+            user = await User.findOne({ phone: phone_number });
+            if (user) {
+                // Link the new firebaseUid to this existing user
+                user.firebaseUid = uid;
+                await user.save();
+            }
+        }
 
         if (!user) {
             user = await User.create({
                 firebaseUid: uid,
-                email,
-                name: name || email.split('@')[0],
+                email: email || '',
+                phone: phone_number || '',
+                name: name || (email ? email.split('@')[0] : (phone_number || 'User')),
                 photoURL: picture || '',
                 isVerified: true,
                 role: 'customer',

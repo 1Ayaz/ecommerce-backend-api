@@ -92,6 +92,24 @@ const addAddress = asyncHandler(async (req, res) => {
             user.savedAddresses = [];
         }
 
+        // If label is Home or Work, remove existing ones to prevent duplicates
+        if (newAddress.label === 'Home' || newAddress.label === 'Work') {
+            user.savedAddresses = user.savedAddresses.filter(addr => addr.label !== newAddress.label);
+        }
+
+        // Prevent spamming "Current Location" from App.jsx auto-save
+        if (newAddress.label === 'Current Location') {
+            const existingCurrent = user.savedAddresses.find(addr => addr.label === 'Current Location');
+            if (existingCurrent) {
+                // Just update the existing one
+                existingCurrent.fullAddress = newAddress.fullAddress;
+                existingCurrent.lat = newAddress.lat;
+                existingCurrent.lng = newAddress.lng;
+                await user.save();
+                return res.status(200).json({ success: true, data: user.savedAddresses });
+            }
+        }
+
         user.savedAddresses.push(newAddress);
         await user.save();
 

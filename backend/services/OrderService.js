@@ -20,14 +20,35 @@ const PAYMENT_TOGGLE_MAP = {
 
 // ─── Delivery Fee Calculator ─────────────────────────────────────────────────
 // Calculates fee from vendor's distance-based slab table
-function calcDeliveryFeeFromSlabs(distanceKm, slabs, freeDeliveryAboveAmount, orderAmount) {
+function calcDeliveryFeeFromSlabs(distanceKm, slabs, freeDeliveryAboveAmount, orderAmount, freeDeliveryRadiusKm) {
     // Check free delivery threshold first
     if (freeDeliveryAboveAmount && orderAmount >= freeDeliveryAboveAmount) {
         return 0;
     }
+
+    // Explicitly enforce the free delivery radius setting if it's set and > 0
+    if (freeDeliveryRadiusKm !== undefined && freeDeliveryRadiusKm !== null) {
+        if (freeDeliveryRadiusKm > 0 && distanceKm <= freeDeliveryRadiusKm) {
+            return 0; // Explicitly free within the radius
+        }
+    }
+
     // Find matching slab
     const slab = slabs.find(s => distanceKm >= s.fromKm && distanceKm < s.toKm);
-    return slab ? slab.fee : 0;
+
+    let fee = slab ? slab.fee : 0;
+
+    // If the vendor explicitly set radius (including 0), 
+    // and the slab mistakenly returns 0 when the distance is OUTSIDE the free radius, 
+    // enforce a minimum fee to respect the vendor's strict radius setting.
+    if (fee === 0) {
+        if (freeDeliveryRadiusKm === 0 || (freeDeliveryRadiusKm > 0 && distanceKm > freeDeliveryRadiusKm)) {
+            const nextSlab = slabs.find(s => s.fee > 0);
+            fee = nextSlab ? nextSlab.fee : 30; // Fallback to 30 if no paid slabs exist
+        }
+    }
+
+    return fee;
 }
 
 class OrderService {
@@ -170,7 +191,8 @@ class OrderService {
                 distanceKm,
                 cfg.deliverySlabs,
                 cfg.freeDeliveryAboveAmount,
-                itemsTotal
+                itemsTotal,
+                cfg.freeDeliveryRadiusKm
             );
         }
 

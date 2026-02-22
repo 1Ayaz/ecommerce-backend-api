@@ -105,13 +105,6 @@ function AppContent({ locationData, setLocationData, showLocationPicker, setShow
     setLocationData(data);
     setShowLocationPicker(false);
     localStorage.setItem('userLocation', JSON.stringify(data));
-    if (user) {
-      API.post('/users/addresses', {
-        label: 'Current Location',
-        address: data.formattedAddress,
-        location: { lat: data.lat, lng: data.lng }
-      }).catch(() => { });
-    }
   };
 
   const handleServiceUnavailable = () => {

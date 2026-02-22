@@ -640,9 +640,9 @@ export default function Checkout() {
                                                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Save Address As</h4>
                                                     <div className="flex gap-2 flex-wrap">
                                                         {[
-                                                            { id: 'Home', icon: '🏠', disabled: hasHome },
-                                                            { id: 'Work', icon: '🏢', disabled: hasWork },
-                                                            { id: 'Other', icon: '📍', disabled: false },
+                                                            { id: 'Home', icon: '🏠' },
+                                                            { id: 'Work', icon: '🏢' },
+                                                            { id: 'Other', icon: '📍' },
                                                         ].map(t => (
                                                             <button key={t.id} onClick={() => !t.disabled && setAddrLabel(t.id)}
                                                                 disabled={t.disabled}
