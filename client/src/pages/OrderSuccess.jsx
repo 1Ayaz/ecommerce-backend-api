@@ -14,14 +14,19 @@ const STATUS_FLOW = [
 ];
 
 function getStatusIndex(status) {
-    const idx = STATUS_FLOW.findIndex(s => s.key === status);
-    return idx >= 0 ? idx : 0;
+    if (status === 'placed') return 0;
+    if (status === 'accepted' || status === 'assigned') return 1;
+    if (status === 'picked_up' || status === 'out_for_delivery') return 2;
+    if (status === 'delivered') return 3;
+    return 0;
 }
 
 function getProgress(status) {
     const map = {
         'placed': 10,
         'accepted': 35,
+        'assigned': 35,
+        'picked_up': 75,
         'out_for_delivery': 75,
         'delivered': 100,
     };

@@ -148,8 +148,8 @@ export default function DeliveryDashboard() {
 
     const getNextStatusInfo = (currentStatus) => {
         const flow = {
-            assigned: { next: 'picked_up', label: 'Mark Picked Up' },
-            picked_up: { next: 'out_for_delivery', label: 'Start Delivery' },
+            assigned: { next: 'out_for_delivery', label: 'Mark Picked Up (Out for Delivery)' },
+            picked_up: { next: 'out_for_delivery', label: 'Start Delivery' }, // Fallback for old orders
             out_for_delivery: { next: 'delivered', label: 'Deliver Order' },
         };
         return flow[currentStatus];

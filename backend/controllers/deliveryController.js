@@ -44,14 +44,14 @@ const updateDeliveryStatus = asyncHandler(async (req, res) => {
         throw new Error('Order not found or not assigned to you');
     }
 
-    // Strict state sequence: assigned -> picked_up -> out_for_delivery -> delivered
+    // Strict state sequence: assigned -> out_for_delivery -> delivered
     const validNextStates = {
-        'assigned': 'picked_up',
-        'picked_up': 'out_for_delivery',
-        'out_for_delivery': 'delivered'
+        'assigned': ['picked_up', 'out_for_delivery'],
+        'picked_up': ['out_for_delivery'],
+        'out_for_delivery': ['delivered']
     };
 
-    if (validNextStates[order.status] !== status) {
+    if (!validNextStates[order.status]?.includes(status)) {
         res.status(400);
         throw new Error(`Invalid status transition. Cannot change from '${order.status}' to '${status}'.`);
     }
