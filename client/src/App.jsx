@@ -209,12 +209,12 @@ function AppContent({ locationData, setLocationData, showLocationPicker, setShow
         newestOnTop
         closeOnClick
         pauseOnHover={false}
-        theme="dark"
+        theme="light"
         toastStyle={{
           borderRadius: '14px',
           fontWeight: 600,
           fontSize: '13px',
-          boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
         }}
       />
     </div>
@@ -249,7 +249,24 @@ function App() {
   });
 
   const [showLocationPicker, setShowLocationPicker] = useState(() => {
-    return !localStorage.getItem('userLocation');
+    // If location is already set, don't show picker
+    if (localStorage.getItem('userLocation')) return false;
+
+    // Direct check: if user has saved addresses, don't show picker
+    try {
+      const savedUserStr = localStorage.getItem('mubarak_user');
+      if (savedUserStr) {
+        const parsedUser = JSON.parse(savedUserStr);
+        if (parsedUser?.savedAddresses && parsedUser.savedAddresses.length > 0) {
+          return false;
+        }
+      }
+    } catch (e) {
+      console.error("Error reading saved user:", e);
+    }
+
+    // Otherwise, show picker
+    return true;
   });
 
   const [serviceUnavailable, setServiceUnavailable] = useState(false);
