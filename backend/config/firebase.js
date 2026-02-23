@@ -1,7 +1,5 @@
 const admin = require('firebase-admin');
-const logger = require('../utils/logger');
 
-// Initialize Firebase Admin SDK
 let firebaseInitialized = false;
 
 try {
@@ -12,18 +10,21 @@ try {
         try {
             serviceAccount = JSON.parse(rawKey);
         } catch (parseErr) {
-            logger.warn('FIREBASE_SERVICE_ACCOUNT_KEY is not valid JSON — falling back to default credentials. Google Sign-In will not work until a valid key is provided.');
+            console.warn('FIREBASE_SERVICE_ACCOUNT_KEY is not valid JSON. Ensure Render environment variables are set correctly.');
         }
     }
 
     if (serviceAccount) {
-        admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount)
+        });
+        firebaseInitialized = true;
+        console.log('Firebase Admin SDK initialized successfully via Environment Variable');
     } else {
-        admin.initializeApp();
+        console.warn('Firebase Admin SDK disabled — no FIREBASE_SERVICE_ACCOUNT_KEY found.');
     }
-    firebaseInitialized = true;
 } catch (err) {
-    logger.warn('Firebase Admin SDK failed to initialize — Google Sign-In disabled:', err.message);
+    console.warn('Firebase Admin SDK failed to initialize:', err.message);
 }
 
 module.exports = admin;

@@ -7,7 +7,7 @@ const ApiError = require('../utils/ApiError');
 const VendorProduct = require('../models/VendorProduct');
 const MapService = require('./MapService');
 const { emitToRoom } = require('../utils/socket');
-const { sendPushNotification } = require('../controllers/pushController');
+const sendNotification = require('../utils/sendNotification');
 
 // ─── Payment Method → Settings field map ────────────────────────────────────
 const PAYMENT_TOGGLE_MAP = {
@@ -507,11 +507,19 @@ class OrderService {
             message: 'A new order was just placed.'
         });
 
-        sendPushNotification(vendorId, {
-            title: 'New Order Received! 🛍️',
-            body: `Order #${order._id.toString().slice(-6)} just arrived!`,
-            icon: '/icon-192.png'
-        });
+        // FCM Vendor
+        const populatedVendor = await User.findOne({ vendorId }).select('fcmToken');
+        if (populatedVendor && populatedVendor.fcmToken) {
+            await sendNotification(
+                populatedVendor.fcmToken,
+                "New Order",
+                "You received a new order!",
+                {
+                    type: "new_order_alarm",
+                    orderId: order._id.toString()
+                }
+            );
+        }
 
         return order;
     }
@@ -520,7 +528,7 @@ class OrderService {
      * Update order status with forward-only transition guard
      */
     static async updateStatus(orderId, status, driverId, user, otp) {
-        const order = await Order.findById(orderId).populate('customerId', 'name phone');
+        const order = await Order.findById(orderId).populate('customerId', 'name phone fcmToken');
         if (!order) throw new ApiError(404, 'Order not found');
 
         // Admins are observers only — they cannot modify order state
@@ -567,26 +575,54 @@ class OrderService {
 
         const updatedOrder = await order.save();
 
-        // Notify customer
-        emitToRoom(order.customerId._id.toString(), 'order-update', {
+        // Notify customer via Socket
+        emitToRoom(order.customerId._id.toString(), 'orderStatusUpdate', {
             orderId: order._id,
-            status,
-            message: messages[status] || `Your order status: ${status}`,
-            statusTimeline: updatedOrder.statusTimeline
+            status: order.status
         });
 
+        // Notify customer via FCM based on status
+        if (status === 'out_for_delivery' && order.customerId.fcmToken) {
+            await sendNotification(
+                order.customerId.fcmToken,
+                "Out for Delivery",
+                "Your order is on the way",
+                {
+                    type: "order_status",
+                    orderId: order._id.toString()
+                }
+            );
+        } else if (status === 'delivered' && order.customerId.fcmToken) {
+            await sendNotification(
+                order.customerId.fcmToken,
+                "Order Delivered",
+                "Enjoy your meal!",
+                {
+                    type: "order_status",
+                    orderId: order._id.toString()
+                }
+            );
+        }
+
         // Notify driver on assignment
-        if (status === 'assigned' && driverId) {
+        if (status === 'accepted' && driverId) { // Changed 'assigned' to 'accepted' based on spec
             emitToRoom(driverId.toString(), 'delivery-assigned', {
                 orderId: order._id,
                 message: 'New delivery task assigned to you'
             });
 
-            sendPushNotification(driverId, {
-                title: 'New Delivery Assigned! 🛵',
-                body: `You've been assigned order #${order._id.toString().slice(-6)}`,
-                icon: '/icon-192.png'
-            });
+            const driverUser = await User.findById(driverId).select('fcmToken');
+            if (driverUser && driverUser.fcmToken) {
+                await sendNotification(
+                    driverUser.fcmToken,
+                    "Order Assigned",
+                    "You have a new delivery",
+                    {
+                        type: "delivery_assigned_alarm",
+                        orderId: order._id.toString()
+                    }
+                );
+            }
         }
 
         return updatedOrder;

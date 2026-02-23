@@ -60,6 +60,11 @@ const initSocket = (server) => {
             console.log(`👤 Socket ${socket.id} joined room: ${room}`);
         });
 
+        socket.on('joinRoom', (userId) => {
+            socket.join(userId);
+            console.log(`👤 Socket ${socket.id} explicitly joined room: ${userId}`);
+        });
+
         socket.on('disconnect', () => {
             console.log(`🔌 Disconnected: ${socket.id}`);
         });

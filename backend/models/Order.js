@@ -69,12 +69,8 @@ const orderSchema = new mongoose.Schema(
             enum: [
                 'placed',
                 'accepted',
-                'assigned',
-                'picked_up',
                 'out_for_delivery',
-                'delivered',
-                'cancelled',
-                'refunded',
+                'delivered'
             ],
             default: 'placed',
         },
@@ -100,14 +96,10 @@ const orderSchema = new mongoose.Schema(
 // ─── Status Transition Guard ────────────────────────────────────────────────
 // Defines allowed forward-only transitions to prevent skipping or reverting
 orderSchema.statics.ALLOWED_TRANSITIONS = {
-    placed: ['accepted', 'cancelled'],
-    accepted: ['assigned', 'cancelled'],
-    assigned: ['picked_up', 'out_for_delivery', 'cancelled'],
-    picked_up: ['out_for_delivery', 'cancelled'],
+    placed: ['accepted'],
+    accepted: ['out_for_delivery'],
     out_for_delivery: ['delivered'],
-    delivered: ['refunded'],
-    cancelled: [],
-    refunded: [],
+    delivered: [],
 };
 
 orderSchema.index({ customerId: 1 });

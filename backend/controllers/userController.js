@@ -14,6 +14,19 @@ const getUserProfile = asyncHandler(async (req, res) => {
     }
 });
 
+// @desc    Save FCM Token
+// @route   POST /api/users/fcm-token
+// @access  Private
+const saveFcmToken = asyncHandler(async (req, res) => {
+    const { token } = req.body;
+
+    await User.findByIdAndUpdate(req.user._id, {
+        fcmToken: token
+    });
+
+    res.json({ success: true });
+});
+
 // @desc    Get all users (admin only)
 // @route   GET /api/users/all
 // @access  Private/Admin
@@ -92,9 +105,16 @@ const addAddress = asyncHandler(async (req, res) => {
             user.savedAddresses = [];
         }
 
-        // If label is Home or Work, remove existing ones to prevent duplicates
-        if (newAddress.label === 'Home' || newAddress.label === 'Work') {
-            user.savedAddresses = user.savedAddresses.filter(addr => addr.label !== newAddress.label);
+        const newLabel = (newAddress.label || 'home').toLowerCase();
+
+        // 1 Home only, 1 Work only
+        if (newLabel === 'home' || newLabel === 'work') {
+            const exists = user.savedAddresses.find(addr => (addr.label || '').toLowerCase() === newLabel);
+            if (exists) {
+                return res.status(400).json({
+                    message: `${newLabel} already exists`
+                });
+            }
         }
 
         // Prevent spamming "Current Location" from App.jsx auto-save
@@ -157,11 +177,64 @@ const deleteAddress = asyncHandler(async (req, res) => {
     }
 });
 
+// @desc    Update an address
+// @route   PUT /api/users/addresses/:id
+// @access  Private
+const updateAddress = asyncHandler(async (req, res) => {
+    const { label, name, phone, flat, building, area, landmark, city, state, pincode, address, fullAddress, location } = req.body;
+    const addressId = req.params.id;
+    const user = await User.findById(req.user._id);
+
+    if (user) {
+        const addressToUpdate = user.savedAddresses.id(addressId);
+        if (!addressToUpdate) {
+            res.status(404);
+            throw new Error('Address not found');
+        }
+
+        const newLabel = (label || addressToUpdate.label || 'home').toLowerCase();
+
+        if (newLabel === 'home' || newLabel === 'work') {
+            const exists = user.savedAddresses.find(
+                addr => (addr.label || '').toLowerCase() === newLabel && addr._id.toString() !== addressId
+            );
+
+            if (exists) {
+                return res.status(400).json({
+                    message: `${newLabel} already exists`
+                });
+            }
+        }
+
+        addressToUpdate.label = label || addressToUpdate.label;
+        addressToUpdate.name = name || addressToUpdate.name;
+        addressToUpdate.phone = phone || addressToUpdate.phone;
+        addressToUpdate.flat = flat || addressToUpdate.flat;
+        addressToUpdate.building = building || addressToUpdate.building;
+        addressToUpdate.area = area || addressToUpdate.area;
+        addressToUpdate.landmark = landmark || addressToUpdate.landmark;
+        addressToUpdate.city = city || addressToUpdate.city;
+        addressToUpdate.state = state || addressToUpdate.state;
+        addressToUpdate.pincode = pincode || addressToUpdate.pincode;
+        addressToUpdate.fullAddress = fullAddress || address || addressToUpdate.fullAddress;
+        if (location?.lat) addressToUpdate.lat = location.lat;
+        if (location?.lng) addressToUpdate.lng = location.lng;
+
+        await user.save();
+        res.json({ success: true, data: user.savedAddresses });
+    } else {
+        res.status(404);
+        throw new Error('User not found');
+    }
+});
+
 module.exports = {
     getUserProfile,
     updateUserProfile,
+    saveFcmToken,
     addAddress,
     getAddresses,
+    updateAddress,
     deleteAddress,
     getUsers
 };

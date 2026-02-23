@@ -42,6 +42,10 @@ const userSchema = new mongoose.Schema(
         deliveryPin: {
             type: String, // 4-digit static PIN
         },
+        fcmToken: {
+            type: String,
+            default: null,
+        },
         isOnline: {
             type: Boolean,
             default: true, // For delivery partners
@@ -52,7 +56,11 @@ const userSchema = new mongoose.Schema(
         },
         savedAddresses: [
             {
-                label: { type: String, default: 'Home' },
+                label: {
+                    type: String,
+                    enum: ['home', 'work', 'other'],
+                    default: 'home'
+                },
                 name: String,            // Recipient name
                 phone: String,           // Contact phone for this address
                 flat: String,            // Flat / House Number
