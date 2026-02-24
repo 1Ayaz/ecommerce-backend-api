@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /vendor
+Disallow: /delivery
+Disallow: /staff-login
+Disallow: /account
+
+Sitemap: /sitemap.xml
