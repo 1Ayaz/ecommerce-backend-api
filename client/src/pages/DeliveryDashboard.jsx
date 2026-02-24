@@ -43,6 +43,10 @@ export default function DeliveryDashboard() {
 
         socket.on('connect', () => {
             console.log('🔗 Driver Real-time connected');
+            if (user?._id) {
+                socket.emit('join_delivery_room', user._id);
+                console.log(`📡 Joined delivery room: ${user._id}`);
+            }
         });
 
         socket.on('delivery-assigned', (data) => {

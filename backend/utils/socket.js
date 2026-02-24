@@ -82,6 +82,16 @@ const initSocket = (server) => {
             console.log(`👤 Socket ${socket.id} joined room: ${room}`);
         });
 
+        socket.on('join_vendor_room', (vendorId) => {
+            socket.join(`vendor_${vendorId}`);
+            console.log(`🏪 Vendor joined room: vendor_${vendorId}`);
+        });
+
+        socket.on('join_delivery_room', (deliveryId) => {
+            socket.join(`delivery_${deliveryId}`);
+            console.log(`🛵 Delivery joined room: delivery_${deliveryId}`);
+        });
+
         socket.on('joinRoom', (userId) => {
             socket.join(userId);
             console.log(`👤 Socket ${socket.id} explicitly joined room: ${userId}`);

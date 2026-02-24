@@ -496,6 +496,13 @@ class OrderService {
         });
 
         // ── 14. Real-time notifications ───────────────────────────────────────
+        emitToRoom(`vendor_${vendorId.toString()}`, 'new-order', {
+            orderId: order._id,
+            status: 'placed',
+            message: 'You have a new order!'
+        });
+
+        // Emitting to the original room fallback
         emitToRoom(vendorId.toString(), 'new-order', {
             orderId: order._id,
             status: 'placed',
@@ -607,6 +614,11 @@ class OrderService {
 
         // Notify driver on assignment
         if (status === 'accepted' && driverId) { // Changed 'assigned' to 'accepted' based on spec
+            emitToRoom(`delivery_${driverId.toString()}`, 'delivery-assigned', {
+                orderId: order._id,
+                message: 'New delivery task assigned to you'
+            });
+
             emitToRoom(driverId.toString(), 'delivery-assigned', {
                 orderId: order._id,
                 message: 'New delivery task assigned to you'
