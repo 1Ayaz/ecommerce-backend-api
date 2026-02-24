@@ -1,36 +1,43 @@
-// firebase-messaging-sw.js
+// firebase-messaging-sw.js — Background message handler for FCM web push
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
 
-// TODO: Paste your Firebase config here from the console
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyCIzJ6QoLN-Zx_DWA_iA1ZdqJKO2Glje94",
+    authDomain: "mubarak-fresh-chicken.firebaseapp.com",
+    projectId: "mubarak-fresh-chicken",
+    storageBucket: "mubarak-fresh-chicken.firebasestorage.app",
+    messagingSenderId: "43887751317",
+    appId: "1:43887751317:web:14c0c4f996813f804ceb9c"
 };
 
-try {
-    // Only initialize if API Key is somewhat populated
-    if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
-        firebase.initializeApp(firebaseConfig);
-        const messaging = firebase.messaging();
+firebase.initializeApp(firebaseConfig);
+const messaging = firebase.messaging();
 
-        messaging.onBackgroundMessage((payload) => {
-            console.log('[firebase-messaging-sw.js] Received background message ', payload);
+messaging.onBackgroundMessage((payload) => {
+    console.log('[firebase-messaging-sw.js] Background message:', payload);
 
-            const notificationTitle = payload.notification?.title || 'Notification';
-            const notificationOptions = {
-                body: payload.notification?.body || 'You have a new update.',
-                icon: '/vite.svg', // Update icon path as needed
-                data: payload.data
-            };
+    const title = payload.notification?.title || payload.data?.title || 'Mubarak Fresh Chicken';
+    const body = payload.notification?.body || payload.data?.body || 'You have a new notification.';
 
-            self.registration.showNotification(notificationTitle, notificationOptions);
-        });
-    }
-} catch (e) {
-    console.log("Firebase SW init failed:", e);
-}
+    self.registration.showNotification(title, {
+        body,
+        icon: '/vite.svg',
+        badge: '/vite.svg',
+        data: payload.data,
+        vibrate: [200, 100, 200],
+    });
+});
+
+// Handle notification click — open or focus the app
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+            if (clientList.length > 0) {
+                return clientList[0].focus();
+            }
+            return clients.openWindow('/');
+        })
+    );
+});
