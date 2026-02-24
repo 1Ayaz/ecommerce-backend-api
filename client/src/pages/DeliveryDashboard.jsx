@@ -31,11 +31,14 @@ export default function DeliveryDashboard() {
         const token = localStorage.getItem('mubarak_token');
         if (!token || !isOnline) return;
 
-        const envUrl = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/api\/?$/, '');
-        const socketUrl = envUrl || window.location.origin.replace('5173', '5000');
+        const socketUrl = import.meta.env.VITE_SOCKET_URL
+            || (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '')
+            || window.location.origin.replace('5173', '5000');
         const socket = io(socketUrl, {
             auth: { token },
-            transports: ['websocket', 'polling']
+            transports: ['polling', 'websocket'],
+            reconnection: true,
+            reconnectionAttempts: 5,
         });
 
         socket.on('connect', () => {
@@ -408,7 +411,7 @@ export default function DeliveryDashboard() {
 
                                                             return (
                                                                 <a
-                                                                    href={`https://www.google.com/maps/dir/?api=1&destination=${destination}`}
+                                                                    href={`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`}
                                                                     target="_blank"
                                                                     rel="noopener noreferrer"
                                                                     className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 bg-brand-red/5 text-brand-red text-[11px] font-black uppercase tracking-wider rounded-lg hover:bg-brand-red/10 transition-colors"
