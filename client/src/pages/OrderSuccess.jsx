@@ -85,7 +85,7 @@ export default function OrderSuccess() {
         if (!orderId || !localToken) return;
 
         const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const envUrl = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/api\/?$/, '');
+        const envUrl = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '');
         const socketUrl = envUrl || (isLocal ? 'http://localhost:5000' : 'https://ecommerce-backend-api-qzgf.onrender.com');
         const socket = io(socketUrl, {
             auth: { token: localToken },
