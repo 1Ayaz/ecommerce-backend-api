@@ -1,14 +1,16 @@
 // firebase-messaging-sw.js — Background message handler for FCM web push
+// NOTE: Firebase config is injected at build time by the sw-env-plugin in vite.config.js
+// Do NOT hardcode API keys here.
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
 
 const firebaseConfig = {
-    apiKey: "AIzaSyCIzJ6QoLN-Zx_DWA_iA1ZdqJKO2Glje94",
-    authDomain: "mubarak-fresh-chicken.firebaseapp.com",
-    projectId: "mubarak-fresh-chicken",
-    storageBucket: "mubarak-fresh-chicken.firebasestorage.app",
-    messagingSenderId: "43887751317",
-    appId: "1:43887751317:web:14c0c4f996813f804ceb9c"
+    apiKey: "__VITE_FIREBASE_API_KEY__",
+    authDomain: "__VITE_FIREBASE_AUTH_DOMAIN__",
+    projectId: "__VITE_FIREBASE_PROJECT_ID__",
+    storageBucket: "__VITE_FIREBASE_STORAGE_BUCKET__",
+    messagingSenderId: "__VITE_FIREBASE_MESSAGING_SENDER_ID__",
+    appId: "__VITE_FIREBASE_APP_ID__"
 };
 
 firebase.initializeApp(firebaseConfig);
