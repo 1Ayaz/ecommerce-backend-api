@@ -51,9 +51,7 @@ export const subscribeToPushNotifications = async () => {
         });
 
         if (currentToken) {
-            await API.post('/users/subscribe', {
-                subscription: { type: 'fcm', token: currentToken }
-            });
+            await API.post('/users/fcm-token', { token: currentToken });
             console.log('✅ FCM Push notifications subscribed successfully');
         }
 
