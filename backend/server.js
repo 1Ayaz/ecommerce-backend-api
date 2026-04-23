@@ -9,10 +9,7 @@ const cookieParser = require('cookie-parser');
 const connectDB = require('./config/db');
 const { globalLimiter, authLimiter, orderLimiter } = require('./middleware/rateLimit');
 
-// Connect to Database
-if (process.env.NODE_ENV !== 'test') {
-    connectDB();
-}
+// Connection will be handled in startServer() at the bottom of the file
 
 const app = express();
 
@@ -108,12 +105,27 @@ const server = http.createServer(app);
 // Initialize Socket.io
 initSocket(server);
 
-// Only start server if not in test mode
-if (process.env.NODE_ENV !== 'test') {
-    server.listen(PORT, '0.0.0.0', () => {
-        console.log(`🚀 Mubarak API & Real-time Server running on port ${PORT} (0.0.0.0)`);
-    });
-}
+// Combined Startup Function
+const startServer = async () => {
+    try {
+        // 1. Connect to Database first
+        if (process.env.NODE_ENV !== 'test') {
+            await connectDB();
+        }
+
+        // 2. Then start the server
+        if (process.env.NODE_ENV !== 'test') {
+            server.listen(PORT, '0.0.0.0', () => {
+                console.log(`🚀 Mubarak API & Real-time Server running on port ${PORT} (0.0.0.0)`);
+            });
+        }
+    } catch (err) {
+        console.error('❌ Failed to start server:', err.message);
+        process.exit(1);
+    }
+};
+
+startServer();
 
 // Crash protection — log and keep running
 process.on('uncaughtException', (err) => {
