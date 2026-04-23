@@ -8,6 +8,12 @@ const connectDB = async () => {
       ? (process.env.MONGO_URI_TEST || 'mongodb://localhost:27017/mubarak_test')
       : process.env.MONGO_URI;
 
+    if (!uri) {
+      console.error('❌ CRITICAL: MONGO_URI is not defined in environment variables!');
+      console.error('Go to Render Dashboard -> Environment and add MONGO_URI.');
+      process.exit(1);
+    }
+
     const conn = await mongoose.connect(uri, {
       serverSelectionTimeoutMS: 10000, // 10 second timeout
     });
