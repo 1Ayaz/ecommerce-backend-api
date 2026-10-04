@@ -4,8 +4,8 @@ import { auth, googleProvider, signInWithEmailAndPassword, createUserWithEmailAn
 import API from '../config/api';
 
 const useAuthStore = create((set) => ({
-    user: JSON.parse(localStorage.getItem('mubarak_user')) || null,
-    token: localStorage.getItem('mubarak_token') || null,
+    user: JSON.parse(localStorage.getItem('tfc_user')) || null,
+    token: localStorage.getItem('tfc_token') || null,
     loading: false,
     error: null,
 
@@ -22,8 +22,8 @@ const useAuthStore = create((set) => ({
             const idToken = await result.user.getIdToken();
             const { data } = await API.post('/auth/google', { idToken });
 
-            localStorage.setItem('mubarak_token', data.token);
-            localStorage.setItem('mubarak_user', JSON.stringify(data.user));
+            localStorage.setItem('tfc_token', data.token);
+            localStorage.setItem('tfc_user', JSON.stringify(data.user));
 
             set({ user: data.user, token: data.token, loading: false });
             return data;
@@ -53,8 +53,8 @@ const useAuthStore = create((set) => ({
 
             const { data } = await API.post('/auth/google', { idToken });
 
-            localStorage.setItem('mubarak_token', data.token);
-            localStorage.setItem('mubarak_user', JSON.stringify(data.user));
+            localStorage.setItem('tfc_token', data.token);
+            localStorage.setItem('tfc_user', JSON.stringify(data.user));
 
             set({ user: data.user, token: data.token, loading: false });
             return data;
@@ -87,8 +87,8 @@ const useAuthStore = create((set) => ({
 
             const { data } = await API.post('/auth/google', { idToken });
 
-            localStorage.setItem('mubarak_token', data.token);
-            localStorage.setItem('mubarak_user', JSON.stringify(data.user));
+            localStorage.setItem('tfc_token', data.token);
+            localStorage.setItem('tfc_user', JSON.stringify(data.user));
 
             set({ user: data.user, token: data.token, loading: false });
             return data;
@@ -111,8 +111,8 @@ const useAuthStore = create((set) => ({
         try {
             const { data } = await API.post('/auth/admin-login', { email, password });
 
-            localStorage.setItem('mubarak_token', data.token);
-            localStorage.setItem('mubarak_user', JSON.stringify(data.user));
+            localStorage.setItem('tfc_token', data.token);
+            localStorage.setItem('tfc_user', JSON.stringify(data.user));
 
             set({ user: data.user, token: data.token, loading: false });
 
@@ -136,15 +136,15 @@ const useAuthStore = create((set) => ({
         try {
             const { data } = await API.get('/users/profile');
             const freshUser = data.data;
-            localStorage.setItem('mubarak_user', JSON.stringify(freshUser));
+            localStorage.setItem('tfc_user', JSON.stringify(freshUser));
             set({ user: freshUser });
             return freshUser;
         } catch (error) {
             console.error('Failed to fetch profile:', error);
             // If 401, token is invalid — clear auth
             if (error.response?.status === 401) {
-                localStorage.removeItem('mubarak_token');
-                localStorage.removeItem('mubarak_user');
+                localStorage.removeItem('tfc_token');
+                localStorage.removeItem('tfc_user');
                 set({ user: null, token: null });
             }
             return null;
@@ -153,8 +153,8 @@ const useAuthStore = create((set) => ({
 
     // Logout
     logout: () => {
-        localStorage.removeItem('mubarak_token');
-        localStorage.removeItem('mubarak_user');
+        localStorage.removeItem('tfc_token');
+        localStorage.removeItem('tfc_user');
         localStorage.removeItem('userLocation');
         set({ user: null, token: null });
     },

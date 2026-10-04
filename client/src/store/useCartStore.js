@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 
 const useCartStore = create((set, get) => ({
-    items: JSON.parse(localStorage.getItem('mubarak_cart')) || [],
-    vendorId: localStorage.getItem('mubarak_vendorId') || null,
+    items: JSON.parse(localStorage.getItem('tfc_cart')) || [],
+    vendorId: localStorage.getItem('tfc_vendorId') || null,
 
     // Add item to cart (product + variation — no cut selection)
     addItem: (product, variation) => {
@@ -12,7 +12,7 @@ const useCartStore = create((set, get) => ({
 
         // Multi-Vendor Fix: Identify if the incoming product belongs to a new vendor
         const itemVendorId = product.vendorId || product.storeId;
-        const existingVendorId = get().vendorId || localStorage.getItem('mubarak_vendorId');
+        const existingVendorId = get().vendorId || localStorage.getItem('tfc_vendorId');
 
         // If cart is not empty and the vendor changed, wipe the cart
         if (items.length > 0 && itemVendorId && existingVendorId && itemVendorId !== existingVendorId) {
@@ -46,9 +46,9 @@ const useCartStore = create((set, get) => ({
             ];
         }
 
-        localStorage.setItem('mubarak_cart', JSON.stringify(newItems));
+        localStorage.setItem('tfc_cart', JSON.stringify(newItems));
         if (activeVendorId) {
-            localStorage.setItem('mubarak_vendorId', activeVendorId);
+            localStorage.setItem('tfc_vendorId', activeVendorId);
         }
         set({ items: newItems, vendorId: activeVendorId });
     },
@@ -69,9 +69,9 @@ const useCartStore = create((set, get) => ({
             );
         }
 
-        localStorage.setItem('mubarak_cart', JSON.stringify(newItems));
+        localStorage.setItem('tfc_cart', JSON.stringify(newItems));
         if (newItems.length === 0) {
-            localStorage.removeItem('mubarak_vendorId');
+            localStorage.removeItem('tfc_vendorId');
             set({ items: newItems, vendorId: null });
         } else {
             set({ items: newItems });
@@ -90,8 +90,8 @@ const useCartStore = create((set, get) => ({
     getTotalPrice: () => get().items.reduce((sum, i) => sum + i.price * i.quantity, 0),
 
     clearCart: () => {
-        localStorage.removeItem('mubarak_cart');
-        localStorage.removeItem('mubarak_vendorId');
+        localStorage.removeItem('tfc_cart');
+        localStorage.removeItem('tfc_vendorId');
         set({ items: [], vendorId: null });
     },
 }));

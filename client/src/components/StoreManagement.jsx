@@ -290,7 +290,7 @@ export default function StoreManagement() {
                             </div>
 
                             <form onSubmit={handleSubmit} className="space-y-4">
-                                {field('Store Name *', 'name', 'text', { required: true, placeholder: 'Mubarak Fresh Chicken – Rajahmundry' })}
+                                {field('Store Name *', 'name', 'text', { required: true, placeholder: 'The Fresh Cuts – Rajahmundry' })}
                                 {field('Address', 'address', 'text', { placeholder: 'Main Road, Rajahmundry, AP 533101' })}
                                 <div className="grid grid-cols-2 gap-4">
                                     {field('City', 'city', 'text', { placeholder: 'Rajahmundry' })}

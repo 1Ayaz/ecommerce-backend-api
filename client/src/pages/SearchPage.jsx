@@ -6,7 +6,7 @@ import API from '../config/api';
 import ChickenProduct from '../components/ChickenProduct';
 import VariationSheet from '../components/VariationSheet';
 
-const RECENT_KEY = 'mubarak_recent_searches';
+const RECENT_KEY = 'tfc_recent_searches';
 const MAX_RECENT = 8;
 
 export default function SearchPage() {

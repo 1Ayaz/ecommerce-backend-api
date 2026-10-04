@@ -11,7 +11,7 @@ const bannerSchema = new mongoose.Schema({
 const settingsSchema = new mongoose.Schema({
     siteName: {
         type: String,
-        default: 'Mubarak Fresh Chicken'
+        default: 'The Fresh Cuts'
     },
     supportEmail: {
         type: String,

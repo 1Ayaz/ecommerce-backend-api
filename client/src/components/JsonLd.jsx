@@ -25,7 +25,7 @@ export function ProductJsonLd({ product, siteUrl = '' }) {
         image: product.image,
         brand: {
             '@type': 'Brand',
-            name: 'Mubarak Fresh Chicken',
+            name: 'The Fresh Cuts',
         },
         offers: {
             '@type': 'AggregateOffer',
@@ -37,7 +37,7 @@ export function ProductJsonLd({ product, siteUrl = '' }) {
                 : 'https://schema.org/OutOfStock',
             seller: {
                 '@type': 'Organization',
-                name: 'Mubarak Fresh Chicken',
+                name: 'The Fresh Cuts',
             },
         },
         url: siteUrl ? `${siteUrl}/product/${product.slug || product._id}` : undefined,
@@ -58,7 +58,7 @@ export function LocalBusinessJsonLd({ siteUrl = '' }) {
         '@context': 'https://schema.org',
         '@type': 'LocalBusiness',
         '@id': siteUrl || undefined,
-        name: 'Mubarak Fresh Chicken',
+        name: 'The Fresh Cuts',
         description: 'Fresh chicken delivery in 20 minutes. Cleaned, cut after order, halaal certified.',
         url: siteUrl || undefined,
         telephone: '+91-XXXXXXXXXX',

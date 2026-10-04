@@ -39,7 +39,7 @@ export default function Footer() {
                         </div>
                         <div className="flex items-center gap-3 text-sm opacity-80">
                             <Mail size={18} className="text-brand-red" />
-                            <span>contact@mubarakchicken.com</span>
+                            <span>contact@THEFRESHCUTS.SHOP</span>
                         </div>
                     </div>
                 </div>
@@ -72,7 +72,7 @@ export default function Footer() {
 
             <div className="max-w-7xl mx-auto border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
                 <p className="text-[10px] opacity-40 uppercase tracking-widest text-center md:text-left">
-                    Copyright © 2026 MUBARAKCHICKEN.COM | ALL RIGHTS RESERVED
+                    Copyright © 2026 THEFRESHCUTS.SHOP | ALL RIGHTS RESERVED
                 </p>
                 <div className="flex gap-4">
                     <Instagram size={18} className="opacity-40 hover:opacity-100 cursor-pointer transition-opacity" />

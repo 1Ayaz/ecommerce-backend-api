@@ -99,7 +99,7 @@ export default function VendorDashboard() {
         }
 
         // Socket.io Real-time Connection for Vendors/Admins
-        const token = localStorage.getItem('mubarak_token');
+        const token = localStorage.getItem('tfc_token');
         if (!token) return;
 
         // VITE_SOCKET_URL = explicit socket server URL (e.g. https://your-app.onrender.com)

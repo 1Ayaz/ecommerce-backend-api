@@ -51,7 +51,7 @@ export default function StaffLogin() {
                         <span className="text-white font-bold text-3xl">M</span>
                     </div>
                     <h1 className="text-white font-bold text-2xl tracking-tight">Staff Portal</h1>
-                    <p className="text-white/40 text-sm mt-1">Mubarak Fresh Chicken — Internal Access</p>
+                    <p className="text-white/40 text-sm mt-1">The Fresh Cuts — Internal Access</p>
                 </div>
 
                 {/* Role Selector */}

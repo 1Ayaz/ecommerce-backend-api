@@ -62,7 +62,7 @@ export default function DeliveryDashboard() {
         fetchDeliveredOrders();
 
         // Socket.io Real-time Connection for Drivers
-        const token = localStorage.getItem('mubarak_token');
+        const token = localStorage.getItem('tfc_token');
         if (!token || !isOnline) return;
 
         const socketUrl = import.meta.env.VITE_SOCKET_URL

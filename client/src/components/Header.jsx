@@ -79,11 +79,11 @@ export default function Header({ onOpenLocationPicker }) {
                     <div className="flex items-center gap-10">
                         <Link to="/" className="flex items-center gap-2.5">
                             <div className="w-11 h-11 bg-[#D11243] rounded-2xl flex items-center justify-center shadow-lg transform rotate-2">
-                                <span className="text-white font-bold text-2xl">M</span>
+                                <span className="text-white font-bold text-lg">TFC</span>
                             </div>
                             <div className="flex flex-col">
-                                <h1 className="text-secondary font-bold text-lg leading-none tracking-tight">MUBARAK</h1>
-                                <span className="text-[10px] text-[#D11243] font-bold uppercase tracking-widest mt-0.5">Fresh Chicken</span>
+                                <h1 className="text-secondary font-bold text-lg leading-none tracking-tight">THE FRESH CUTS</h1>
+                                <span className="text-[10px] text-[#D11243] font-bold uppercase tracking-widest mt-0.5">Fresh Chicken & More</span>
                             </div>
                         </Link>
 

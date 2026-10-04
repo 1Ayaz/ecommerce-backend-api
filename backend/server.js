@@ -47,7 +47,7 @@ app.use('/api', globalLimiter);
 
 // --------------- Routes ---------------
 app.get('/', (req, res) => {
-    res.json({ status: 'ok', message: 'Mubarak API is running 🐔' });
+    res.json({ status: 'ok', message: 'The Fresh Cuts API is running 🐔' });
 });
 
 // Auth Routes

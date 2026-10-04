@@ -1,7 +1,7 @@
 {
     "name": "mubarak-backend",
     "version": "1.0.0",
-    "description": "Mubarak Fresh Chicken - Quick Commerce Backend",
+    "description": "The Fresh Cuts - Quick Commerce Backend",
     "main": "server.js",
     "scripts": {
         "start": "node server.js",

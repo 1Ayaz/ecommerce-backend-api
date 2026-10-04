@@ -57,7 +57,7 @@ export default function Home({ locationData }) {
 
                 // Persist vendorId so all pages (category, search) can access it
                 if (storeData?._id) {
-                    localStorage.setItem('mubarak_vendorId', storeData._id);
+                    localStorage.setItem('tfc_vendorId', storeData._id);
                 }
 
                 // Parallel fetch: categories + products + coupons + ratings
@@ -142,7 +142,7 @@ export default function Home({ locationData }) {
     return (
         <div className="min-h-screen bg-brand-light">
             <Helmet>
-                <title>Mubarak Fresh Chicken – Order Online | Delivery in 20 Minutes | Rajahmundry</title>
+                <title>The Fresh Cuts – Order Online | Delivery in 20 Minutes | Rajahmundry</title>
                 <meta name="description" content="Order fresh, cleaned, halaal chicken online. Cut after order, delivered in 20 minutes. Best prices in Rajahmundry." />
             </Helmet>
             <LocalBusinessJsonLd siteUrl={import.meta.env.VITE_SITE_URL || ''} />

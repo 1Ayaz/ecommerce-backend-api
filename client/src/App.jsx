@@ -237,7 +237,7 @@ function App() {
       if (savedLoc) return JSON.parse(savedLoc);
 
       // Try falling back to user's saved addresses to avoid popup flash
-      const savedUserStr = localStorage.getItem('mubarak_user');
+      const savedUserStr = localStorage.getItem('tfc_user');
       if (savedUserStr) {
         const parsedUser = JSON.parse(savedUserStr);
         if (parsedUser?.savedAddresses?.length > 0) {
@@ -263,7 +263,7 @@ function App() {
 
     // Direct check: if user has saved addresses, don't show picker
     try {
-      const savedUserStr = localStorage.getItem('mubarak_user');
+      const savedUserStr = localStorage.getItem('tfc_user');
       if (savedUserStr) {
         const parsedUser = JSON.parse(savedUserStr);
         if (parsedUser?.savedAddresses && parsedUser.savedAddresses.length > 0) {

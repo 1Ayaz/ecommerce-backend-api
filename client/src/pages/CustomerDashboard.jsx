@@ -546,7 +546,7 @@ export default function CustomerDashboard() {
                     <LogOut size={18} /> Sign Out
                 </button>
 
-                <p className="text-center text-[10px] text-slate-300 font-medium pb-4">Mubarak Fresh Chicken • v1.0</p>
+                <p className="text-center text-[10px] text-slate-300 font-medium pb-4">The Fresh Cuts • v1.0</p>
             </div>
         </div>
 

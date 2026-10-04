@@ -93,7 +93,7 @@ export default function OrderSuccess() {
 
     // Real-time socket updates with JWT auth
     useEffect(() => {
-        const localToken = localStorage.getItem('mubarak_token') || token;
+        const localToken = localStorage.getItem('tfc_token') || token;
         if (!orderId || !localToken) return;
 
         const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';

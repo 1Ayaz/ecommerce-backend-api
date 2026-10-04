@@ -8,7 +8,7 @@ const API = axios.create({
 
 // Request interceptor: attach token
 API.interceptors.request.use((config) => {
-    const token = localStorage.getItem('mubarak_token');
+    const token = localStorage.getItem('tfc_token');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
@@ -28,8 +28,8 @@ API.interceptors.response.use(
         // Auth failure — force logout (only on explicit 401)
         if (status === 401) {
             console.error('[API] Force Logout Triggered by 401 from URL:', config.url);
-            localStorage.removeItem('mubarak_token');
-            localStorage.removeItem('mubarak_user');
+            localStorage.removeItem('tfc_token');
+            localStorage.removeItem('tfc_user');
             window.location.href = '/';
             return Promise.reject(error);
         }

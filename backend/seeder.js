@@ -31,30 +31,30 @@ const seedDB = async () => {
 
         // ── 1. Admin ──────────────────────────────────────────────────────
         const admin = await User.create({
-            name: 'Mubarak Admin',
-            email: 'admin@mubarak.com',
+            name: 'The Fresh Cuts Admin',
+            email: 'admin@thefreshcuts.shop',
             password: hashedPw,
             role: 'admin',
             isVerified: true,
         });
-        console.log('✅ Admin created      → admin@mubarak.com / admin123');
+        console.log('✅ Admin created      → admin@thefreshcuts.shop / admin123');
 
         // ── 3. Vendor (Rajahmundry) ──────────────────────────────────────────
         const vendor = await User.create({
             name: 'Vendor Rajahmundry',
-            email: 'vendor@mubarak.com',
+            email: 'vendor@thefreshcuts.shop',
             password: hashedPw,
             role: 'vendor',
             isVerified: true,
         });
-        console.log('✅ Vendor created     → vendor@mubarak.com / admin123');
+        console.log('✅ Vendor created     → vendor@thefreshcuts.shop / admin123');
 
         // ── 4. Rajahmundry Store ─────────────────────────────────────────────
         // Center: 17.0005° N, 81.804° E  (Rajahmundry city center)
         // serviceArea: a ~5 km polygon around the city center
         const store = await Store.create({
-            name: 'Mubarak Fresh Chicken – Rajahmundry',
-            businessName: 'Mubarak Fresh Chicken',
+            name: 'The Fresh Cuts – Rajahmundry',
+            businessName: 'The Fresh Cuts',
             ownerId: vendor._id,
             city: 'Rajahmundry',
             address: 'Main Road, Rajahmundry, Andhra Pradesh 533101',
@@ -88,13 +88,13 @@ const seedDB = async () => {
         // ── 5. Delivery Driver ───────────────────────────────────────────────
         const driver = await User.create({
             name: 'Driver – Rajahmundry',
-            email: 'driver@mubarak.com',
+            email: 'driver@thefreshcuts.shop',
             password: hashedPw,
             role: 'driver',
             vendorId: store._id,
             isVerified: true,
         });
-        console.log('✅ Driver created     → driver@mubarak.com / admin123\n');
+        console.log('✅ Driver created     → driver@thefreshcuts.shop / admin123\n');
 
         // ── 6. Categories ────────────────────────────────────────────────────
         const [chickenCat, bonelessCat, marinatedCat, eggsCat] = await Category.insertMany([
@@ -280,9 +280,9 @@ const seedDB = async () => {
         console.log('🎉 SEEDING COMPLETE!');
         console.log('='.repeat(60));
         console.log('\n📋 LOGIN CREDENTIALS (all passwords: admin123)\n');
-        console.log('  Admin      : admin@mubarak.com');
-        console.log('  Vendor     : vendor@mubarak.com');
-        console.log('  Driver     : driver@mubarak.com');
+        console.log('  Admin      : admin@thefreshcuts.shop');
+        console.log('  Vendor     : vendor@thefreshcuts.shop');
+        console.log('  Driver     : driver@thefreshcuts.shop');
         console.log('\n🏪 STORE');
         console.log(`  Name       : ${store.name}`);
         console.log(`  Location   : Rajahmundry, AP 533101`);
