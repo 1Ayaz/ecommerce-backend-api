@@ -10,7 +10,7 @@ const logger = winston.createLogger({
         winston.format.splat(),
         winston.format.json()
     ),
-    defaultMeta: { service: 'mubarak-backend' },
+    defaultMeta: { service: 'tfc-backend' },
     transports: [
         new winston.transports.Console({
             format: winston.format.combine(

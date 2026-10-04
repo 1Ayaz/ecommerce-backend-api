@@ -22,8 +22,8 @@ export default function Footer() {
                 {/* Brand & Contact */}
                 <div className="space-y-6">
                     <div className="flex items-center gap-2">
-                        <div className="w-10 h-10 bg-brand-red rounded-xl flex items-center justify-center font-black text-xl italic shadow-glow">M</div>
-                        <span className="text-xl font-bold tracking-tight">Mubarak Fresh</span>
+                        <div className="w-10 h-10 bg-brand-red rounded-xl flex items-center justify-center font-black text-sm italic shadow-glow">TFC</div>
+                        <span className="text-xl font-bold tracking-tight">The Fresh Cuts</span>
                     </div>
                     <p className="text-sm opacity-60 leading-relaxed">
                         Premium Halal chicken delivery in Rajahmundry. We ensure the highest hygiene standards, cutting fresh specifically for your order.

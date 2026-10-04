@@ -5,7 +5,7 @@ const connectDB = async () => {
 
   try {
     const uri = process.env.NODE_ENV === 'test'
-      ? (process.env.MONGO_URI_TEST || 'mongodb://localhost:27017/mubarak_test')
+      ? (process.env.MONGO_URI_TEST || 'mongodb://localhost:27017/tfc_test')
       : process.env.MONGO_URI;
 
     if (!uri) {

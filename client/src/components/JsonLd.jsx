@@ -21,7 +21,7 @@ export function ProductJsonLd({ product, siteUrl = '' }) {
         '@context': 'https://schema.org',
         '@type': 'Product',
         name: product.metaTitle || product.name,
-        description: product.metaDescription || product.description || `Fresh ${product.name} from Mubarak`,
+        description: product.metaDescription || product.description || `Fresh ${product.name} from The Fresh Cuts`,
         image: product.image,
         brand: {
             '@type': 'Brand',

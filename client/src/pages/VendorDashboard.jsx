@@ -246,7 +246,7 @@ export default function VendorDashboard() {
                             <LayoutDashboard className="text-white" size={18} />
                         </div>
                         <div className="flex flex-col">
-                            <h2 className="text-sm font-black text-secondary leading-none">MUBARAK</h2>
+                            <h2 className="text-sm font-black text-secondary leading-none">THE FRESH CUTS</h2>
                             <span className={`text-[9px] md:text-[10px] font-black uppercase tracking-widest ${user.role === 'admin' ? 'text-indigo-600' : 'text-[#D11243]'}`}>
                                 {user.role === 'admin' ? 'Admin Panel' : 'Vendor Panel'}
                             </span>

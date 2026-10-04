@@ -162,13 +162,13 @@ productSchema.pre('save', async function (next) {
 
     // Auto-fill SEO defaults if empty
     if (!this.metaTitle) {
-        this.metaTitle = `${this.name} – Fresh Chicken Delivery | Mubarak`;
+        this.metaTitle = `${this.name} – Fresh Chicken Delivery | The Fresh Cuts`;
     }
     if (!this.metaDescription) {
         this.metaDescription = `Order ${this.name} online. ${this.description}. Fresh, cleaned, halaal certified. Delivered in 20 minutes.`;
     }
     if (!this.imageAlt) {
-        this.imageAlt = `${this.name} - Fresh halaal chicken from Mubarak`;
+        this.imageAlt = `${this.name} - Fresh halaal chicken from The Fresh Cuts`;
     }
 
     next();
