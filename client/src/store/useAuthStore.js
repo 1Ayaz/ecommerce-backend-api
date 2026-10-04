@@ -159,6 +159,38 @@ const useAuthStore = create((set) => ({
         set({ user: null, token: null });
     },
 
+
+    // --- WhatsApp OTP Login ---
+    // Step 1: Request OTP to be sent to phone
+    sendOTP: async (phone) => {
+        set({ loading: true, error: null });
+        try {
+            const { data } = await API.post('/auth/send-otp', { phone });
+            set({ loading: false });
+            return data; // { success, phone }
+        } catch (error) {
+            const msg = error.response?.data?.error?.message || error.response?.data?.message || error.message;
+            set({ error: msg, loading: false });
+            throw error;
+        }
+    },
+
+    // Step 2: Verify the OTP code and get JWT token
+    verifyOTP: async (phone, otp, name) => {
+        set({ loading: true, error: null });
+        try {
+            const { data } = await API.post('/auth/verify-otp', { phone, otp, name });
+            localStorage.setItem('tfc_token', data.token);
+            localStorage.setItem('tfc_user', JSON.stringify(data.user));
+            set({ user: data.user, token: data.token, loading: false });
+            return data;
+        } catch (error) {
+            const msg = error.response?.data?.error?.message || error.response?.data?.message || error.message;
+            set({ error: msg, loading: false });
+            throw error;
+        }
+    },
+
     clearError: () => set({ error: null }),
 }));
 

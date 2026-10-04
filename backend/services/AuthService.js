@@ -133,6 +133,63 @@ class AuthService {
             throw new ApiError(401, 'Invalid refresh token');
         }
     }
+
+    /**
+     * Send WhatsApp OTP to a phone number
+     */
+    static async sendOTP(phone) {
+        const { generateOTP, saveOTP } = require('../utils/otpStore');
+        const { sendWhatsAppMessage } = require('../utils/whatsapp');
+
+        // Normalize: strip everything except digits
+        const normalizedPhone = phone.replace(/\D/g, '');
+        if (normalizedPhone.length < 10) {
+            throw new ApiError(400, 'Invalid phone number. Must be at least 10 digits.');
+        }
+
+        const otp = generateOTP();
+        saveOTP(normalizedPhone, otp);
+
+        const message = `Your The Fresh Cuts verification code is: *${otp}*\n\nThis code expires in 5 minutes. Do not share it with anyone.`;
+        await sendWhatsAppMessage(normalizedPhone, message);
+
+        return { success: true, phone: normalizedPhone };
+    }
+
+    /**
+     * Verify OTP and login/register the user
+     */
+    static async verifyOTP(phone, otp, name) {
+        const { verifyOTP: checkOTP } = require('../utils/otpStore');
+
+        const normalizedPhone = phone.replace(/\D/g, '');
+        const result = checkOTP(normalizedPhone, otp);
+
+        if (!result.valid) {
+            throw new ApiError(400, result.reason);
+        }
+
+        // Find existing user by phone, or auto-register
+        let user = await User.findOne({ phone: normalizedPhone });
+        if (!user) {
+            user = await User.create({
+                phone: normalizedPhone,
+                name: name || `User${normalizedPhone.slice(-4)}`,
+                role: 'customer',
+                isVerified: true,
+            });
+        } else {
+            if (!user.isVerified) {
+                user.isVerified = true;
+                await user.save();
+            }
+        }
+
+        return {
+            user,
+            ...this.generateTokens(user)
+        };
+    }
 }
 
 module.exports = AuthService;

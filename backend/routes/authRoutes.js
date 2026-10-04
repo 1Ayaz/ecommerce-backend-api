@@ -8,7 +8,9 @@ const {
     refreshAccessToken,
     getUsers,
     createUser,
-    deleteUser
+    deleteUser,
+    sendOTP,
+    verifyOTP,
 } = require('../controllers/authController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 const { validateLoginCredentials, validateUserCreation, validateMongoId } = require('../middleware/validation');
@@ -18,6 +20,10 @@ router.post('/google', googleSignIn);
 
 // Admin/Vendor Login
 router.post('/admin-login', validateLoginCredentials, adminLogin);
+
+// WhatsApp OTP Auth (customer login/register)
+router.post('/send-otp', sendOTP);
+router.post('/verify-otp', verifyOTP);
 
 // Admin Only
 router.post('/register-vendor', protect, authorize('admin'), registerVendor);

@@ -143,6 +143,33 @@ const registerVendor = asyncHandler(async (req, res) => {
     });
 });
 
+
+// @desc    Send WhatsApp OTP
+// @route   POST /api/auth/send-otp
+const sendOTP = asyncHandler(async (req, res) => {
+    const { phone } = req.body;
+    if (!phone) { res.status(400); throw new Error('Phone number is required'); }
+    const result = await AuthService.sendOTP(phone);
+    res.status(200).json({ success: true, message: 'OTP sent via WhatsApp', phone: result.phone });
+});
+
+// @desc    Verify OTP and login/register user
+// @route   POST /api/auth/verify-otp
+const verifyOTP = asyncHandler(async (req, res) => {
+    const { phone, otp, name } = req.body;
+    if (!phone || !otp) { res.status(400); throw new Error('Phone and OTP are required'); }
+    const result = await AuthService.verifyOTP(phone, otp, name);
+
+    res.cookie('refreshToken', result.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.status(200).json({ success: true, token: result.accessToken, user: result.user });
+});
+
 module.exports = {
     googleSignIn,
     adminLogin,
@@ -151,5 +178,7 @@ module.exports = {
     refreshAccessToken,
     getUsers,
     createUser,
-    deleteUser
+    deleteUser,
+    sendOTP,
+    verifyOTP,
 };

@@ -1,4 +1,5 @@
 const asyncHandler = require('express-async-handler');
+const { sendWhatsAppMessage } = require('../utils/whatsapp');
 
 // @desc    Verify webhook for WhatsApp API (Meta calls this once during setup)
 // @route   GET /api/whatsapp/webhook
@@ -51,9 +52,11 @@ const handleWebhook = asyncHandler(async (req, res) => {
                 
                 if (messageType === 'text') {
                     console.log(`💬 Message body: ${message.text.body}`);
+                    
+                    // Auto-reply to the customer
+                    const replyText = `Hello from The Fresh Cuts! 🐔\n\nWe received your message: "${message.text.body}". \n\nTo place an order, please visit our website: https://thefreshcuts.shop`;
+                    await sendWhatsAppMessage(fromPhone, replyText);
                 }
-                
-                // 🚀 Next step: Add auto-reply logic or trigger socket.io to admin dashboard here
             }
             
             // --- B) Handle Message Status Updates (sent, delivered, read) ---
