@@ -93,6 +93,9 @@ app.use('/api/wishlist', require('./routes/wishlistRoutes'));
 // Rating Routes
 app.use('/api/ratings', require('./routes/ratingRoutes'));
 
+// WhatsApp Webhook Routes
+app.use('/api/whatsapp', require('./routes/whatsappRoutes'));
+
 
 // --------------- Error Handler ---------------
 app.use(require('./middleware/errorMiddleware'));
