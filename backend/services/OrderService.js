@@ -53,10 +53,7 @@ function calcDeliveryFeeFromSlabs(distanceKm, slabs, freeDeliveryAboveAmount, or
 }
 
 class OrderService {
-    /**
-     * Preview Order — calculates fees and totals without checking out or deducting stock.
-     */
-    static async previewOrder(orderData, customerId) {
+    static async _validateAndCalculate(orderData) {
         const { vendorId, items, deliveryAddress, paymentMethod, couponCode } = orderData;
 
         // ── 1. Load global settings (payment toggles + tax + platform fee) ────
@@ -101,9 +98,10 @@ class OrderService {
             }
         }
 
-        // ── 5. Validate items, calculate itemsTotal ───────────────────────────
+        // ── 5. Validate items, calculate itemsTotal, atomic stock deduction ───
         let itemsTotal = 0;
         const validatedItems = [];
+        const stockUpdates = [];
 
         for (const item of items) {
             if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
@@ -137,6 +135,20 @@ class OrderService {
             }
 
             itemsTotal += finalPrice * item.quantity;
+            validatedItems.push({
+                productId: product._id,
+                name: product.name,
+                variationLabel: item.variationLabel,
+                price: finalPrice,
+                quantity: item.quantity,
+            });
+
+            if (override) {
+                stockUpdates.push({
+                    vendorProductId: override._id,
+                    qty: item.quantity
+                });
+            }
         }
 
         // ── 6. Calculate delivery fee from store slab ─────────────────────────
@@ -172,217 +184,11 @@ class OrderService {
         // ── 8. Validate & apply coupon ───────────────────────────────────────
         let discountAmount = 0;
         let appliedCouponCode = null;
+        let coupon = null;
         if (couponCode) {
-            const coupon = await Coupon.findOne({
+            coupon = await Coupon.findOne({
                 code: couponCode.toUpperCase(),
                 storeId: vendorId,
-                isActive: true,
-                expirationDate: { $gte: new Date() }
-            });
-
-            if (!coupon) {
-                throw new ApiError(400, 'Coupon is invalid, expired, or does not apply to this store');
-            }
-            if (coupon.usageLimit !== null && coupon.usedCount >= coupon.usageLimit) {
-                throw new ApiError(400, 'Coupon usage limit has been reached');
-            }
-            if (itemsTotal < coupon.minOrderAmount) {
-                throw new ApiError(400, `Minimum order amount of ₹${coupon.minOrderAmount} required`);
-            }
-
-            if (coupon.discountType === 'percentage') {
-                discountAmount = (itemsTotal * coupon.discountValue) / 100;
-                if (coupon.maxDiscountAmount) {
-                    discountAmount = Math.min(discountAmount, coupon.maxDiscountAmount);
-                }
-            } else {
-                discountAmount = coupon.discountValue;
-            }
-
-            discountAmount = Math.min(discountAmount, itemsTotal);
-            discountAmount = Math.round(discountAmount * 100) / 100;
-            appliedCouponCode = coupon.code;
-        }
-
-        // ── 9. Final grand total ─────────────────────────────────────────────
-        const grandTotal = Math.round(
-            (itemsTotal - discountAmount + deliveryFee + taxAmount + platformFee) * 100
-        ) / 100;
-
-        return {
-            financialSnapshot: {
-                itemsTotal,
-                deliveryFee,
-                platformFee,
-                taxAmount,
-                discountAmount,
-                grandTotal
-            },
-            appliedCouponCode
-        };
-    }
-    /**
-     * Place Order — single point of financial truth
-     * All fees calculated here, locked in financialSnapshot, never recalculated.
-     */
-    static async placeOrder(orderData, customerId) {
-        const { vendorId, items, deliveryAddress, paymentMethod, couponCode, specialInstructions, expectedTotal } = orderData;
-
-        // ── 1. Load global settings (payment toggles + tax + platform fee) ────
-        let settings = await Settings.findOne().lean();
-        if (!settings) {
-            // Bootstrap default if collection is empty
-            settings = { paymentMethods: { codEnabled: true, mockUpiEnabled: true }, taxRate: 0, platformServiceFee: 0 };
-        }
-
-        // ── 2. Validate payment method ────────────────────────────────────────
-        const payMethod = (paymentMethod || 'COD').toUpperCase();
-        const toggleField = PAYMENT_TOGGLE_MAP[payMethod];
-        if (!toggleField) {
-            throw new ApiError(400, `Invalid payment method: ${paymentMethod}`);
-        }
-        if (!settings.paymentMethods?.[toggleField]) {
-            throw new ApiError(400, `Payment method '${paymentMethod}' is currently disabled.`);
-        }
-
-        // ── 3. Verify vendor (Store) ──────────────────────────────────────────
-        const vendor = await Store.findById(vendorId);
-        if (!vendor) throw new ApiError(404, 'Vendor not found');
-        if (!vendor.isActive) throw new ApiError(400, 'This store is currently inactive');
-        if (!vendor.isOpen) throw new ApiError(400, 'This store is currently closed');
-
-        // ── 4. Geo-fence validation ───────────────────────────────────────────
-        if (deliveryAddress.location?.lat && deliveryAddress.location?.lng) {
-            const lat = parseFloat(deliveryAddress.location.lat);
-            const lng = parseFloat(deliveryAddress.location.lng);
-
-            if (!isNaN(lat) && !isNaN(lng)) {
-                const isServiceable = await Store.findOne({
-                    _id: vendorId,
-                    serviceArea: {
-                        $geoIntersects: {
-                            $geometry: { type: 'Point', coordinates: [lng, lat] }
-                        }
-                    }
-                });
-                if (!isServiceable) {
-                    throw new ApiError(400, 'Your delivery address is outside this store\'s serviceable area');
-                }
-            }
-        }
-
-        // ── 5. Validate items, calculate itemsTotal, atomic stock deduction ───
-        let itemsTotal = 0;
-        const validatedItems = [];
-        const stockUpdates = []; // track for atomic deduction
-
-        for (const item of items) {
-            if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
-                throw new ApiError(400, `Invalid quantity for product ${item.productId}`);
-            }
-
-            const product = await Product.findById(item.productId);
-            if (!product) throw new ApiError(400, `Product ${item.productId} not found`);
-
-            const globalVariant = product.variations.find(v => v.label === item.variationLabel);
-            if (!globalVariant) {
-                throw new ApiError(400, `Variation '${item.variationLabel}' for ${product.name} not found`);
-            }
-
-            const override = await VendorProduct.findOne({
-                vendorId,
-                productId: item.productId,
-                variationLabel: item.variationLabel,
-                isActive: true
-            });
-
-            const finalPrice = override ? override.price : globalVariant.basePrice;
-            const inStock = override ? override.inStock : true;
-
-            if (!inStock) {
-                throw new ApiError(400, `${product.name} (${item.variationLabel}) is out of stock`);
-            }
-
-            // Check quantified stock if tracked
-            if (override && override.stockQty !== undefined && override.stockQty < item.quantity) {
-                throw new ApiError(400, `Only ${override.stockQty} units available for ${product.name} (${item.variationLabel})`);
-            }
-
-            itemsTotal += finalPrice * item.quantity;
-            validatedItems.push({
-                productId: product._id,
-                name: product.name,
-                variationLabel: item.variationLabel,
-                price: finalPrice,   // SNAPSHOTTED — never changes
-                quantity: item.quantity,
-            });
-
-            if (override) {
-                stockUpdates.push({
-                    vendorProductId: override._id,
-                    qty: item.quantity
-                });
-            }
-        }
-
-        // ── 6. Atomically deduct stock ────────────────────────────────────────
-        for (const su of stockUpdates) {
-            await VendorProduct.findByIdAndUpdate(
-                su.vendorProductId,
-                {
-                    $inc: { stockQty: -su.qty },
-                    // Auto-set inStock=false if stockQty reaches 0
-                    $set: {}
-                }
-            );
-            // Post-deduction: if stockQty <= 0, mark inStock false
-            await VendorProduct.findOneAndUpdate(
-                { _id: su.vendorProductId, stockQty: { $lte: 0 } },
-                { $set: { inStock: false } }
-            );
-        }
-
-        // ── 7. Calculate delivery fee from store slab ─────────────────────────
-        // Distance calculation: use MapService if lat/lng available, else default slab
-        let deliveryFee = 0; // default: free delivery unless store has slabs
-        const cfg = vendor.deliveryConfig;
-        if (cfg?.deliverySlabs?.length > 0) {
-            // Use distance if available, else use closest slab (0–5km = free typically)
-            let distanceKm = 0;
-            try {
-                if (deliveryAddress.location?.lat && vendor.location?.coordinates?.length === 2) {
-                    const result = await MapService.getDistanceKm(
-                        { lat: parseFloat(deliveryAddress.location.lat), lng: parseFloat(deliveryAddress.location.lng) },
-                        { lat: vendor.location.coordinates[1], lng: vendor.location.coordinates[0] }
-                    );
-                    distanceKm = result ?? 0;
-                }
-            } catch {
-                distanceKm = 0; // graceful fail — use first slab
-            }
-            deliveryFee = calcDeliveryFeeFromSlabs(
-                distanceKm,
-                cfg.deliverySlabs,
-                cfg.freeDeliveryAboveAmount,
-                itemsTotal,
-                cfg.freeDeliveryRadiusKm
-            );
-        }
-
-        // ── 8. Calculate tax ──────────────────────────────────────────────────
-        const taxRate = settings.taxRate ?? 0;
-        const taxAmount = Math.round((itemsTotal * taxRate) / 100 * 100) / 100;
-
-        // ── 9. Platform service fee ───────────────────────────────────────────
-        const platformFee = settings.platformServiceFee ?? 0;
-
-        // ── 10. Validate & apply coupon ───────────────────────────────────────
-        let discountAmount = 0;
-        let appliedCouponCode = null;
-        if (couponCode) {
-            const coupon = await Coupon.findOne({
-                code: couponCode.toUpperCase(),
-                storeId: vendorId,           // MUST belong to same vendor
                 isActive: true,
                 expirationDate: { $gte: new Date() }
             });
@@ -406,19 +212,86 @@ class OrderService {
                 discountAmount = coupon.discountValue;
             }
 
-            // Floor: discount cannot exceed itemsTotal
             discountAmount = Math.min(discountAmount, itemsTotal);
             discountAmount = Math.round(discountAmount * 100) / 100;
             appliedCouponCode = coupon.code;
-
-            // Increment usage counter
-            await Coupon.findByIdAndUpdate(coupon._id, { $inc: { usedCount: 1 } });
         }
 
-        // ── 11. Final grand total ─────────────────────────────────────────────
+        // ── 9. Final grand total ─────────────────────────────────────────────
         const grandTotal = Math.round(
             (itemsTotal - discountAmount + deliveryFee + taxAmount + platformFee) * 100
         ) / 100;
+
+        return {
+            settings,
+            vendor,
+            validatedItems,
+            stockUpdates,
+            financialSnapshot: {
+                itemsTotal,
+                deliveryFee,
+                platformFee,
+                taxAmount,
+                discountAmount,
+                grandTotal
+            },
+            appliedCouponCode,
+            payMethod,
+            coupon
+        };
+    }
+
+    /**
+     * Preview Order — calculates fees and totals without checking out or deducting stock.
+     */
+    static async previewOrder(orderData, customerId) {
+        const { financialSnapshot, appliedCouponCode } = await this._validateAndCalculate(orderData);
+        return {
+            financialSnapshot,
+            appliedCouponCode
+        };
+    }
+    /**
+     * Place Order — single point of financial truth
+     * All fees calculated here, locked in financialSnapshot, never recalculated.
+     */
+    static async placeOrder(orderData, customerId) {
+        const { vendorId, deliveryAddress, specialInstructions, expectedTotal } = orderData;
+
+        const {
+            settings,
+            vendor,
+            validatedItems,
+            stockUpdates,
+            financialSnapshot,
+            appliedCouponCode,
+            payMethod,
+            coupon
+        } = await this._validateAndCalculate(orderData);
+
+        const { itemsTotal, discountAmount, deliveryFee, taxAmount, platformFee, grandTotal } = financialSnapshot;
+
+        // ── 6. Atomically deduct stock ────────────────────────────────────────
+        for (const su of stockUpdates) {
+            await VendorProduct.findByIdAndUpdate(
+                su.vendorProductId,
+                {
+                    $inc: { stockQty: -su.qty },
+                    // Auto-set inStock=false if stockQty reaches 0
+                    $set: {}
+                }
+            );
+            // Post-deduction: if stockQty <= 0, mark inStock false
+            await VendorProduct.findOneAndUpdate(
+                { _id: su.vendorProductId, stockQty: { $lte: 0 } },
+                { $set: { inStock: false } }
+            );
+        }
+
+        if (coupon) {
+            // Increment usage counter
+            await Coupon.findByIdAndUpdate(coupon._id, { $inc: { usedCount: 1 } });
+        }
 
         // ── 11a. Price Trust Sync ─────────────────────────────────────────────
         if (expectedTotal !== undefined && expectedTotal !== null) {
@@ -428,6 +301,7 @@ class OrderService {
         }
 
         // ── 11b. Delivery boy fee (store-configured, not charged to customer) ──
+        const cfg = vendor.deliveryConfig;
         const deliveryBoyFee = cfg?.deliveryBoyFeePerOrder ?? 30;
 
         // ── 11c. Platform commission (store-level or global fallback) ──────────
@@ -496,24 +370,15 @@ class OrderService {
         });
 
         // ── 14. Real-time notifications ───────────────────────────────────────
-        emitToRoom(`vendor_${vendorId.toString()}`, 'new-order', {
-            orderId: order._id,
-            status: 'placed',
-            message: 'You have a new order!'
-        });
-
-        // Emitting to the original room fallback
-        emitToRoom(vendorId.toString(), 'new-order', {
-            orderId: order._id,
-            status: 'placed',
-            message: 'You have a new order!'
-        });
-
-        emitToRoom('admin', 'new-order', {
-            orderId: order._id,
-            status: 'placed',
-            message: 'A new order was just placed.'
-        });
+        // Room strategy:
+        //   vendor auto-joins their storeId room on connect (socket.js)
+        //   vendor_${id} room is joined via manual 'join_vendor_room' event from frontend
+        //   Emitting to both ensures delivery regardless of which path the client used
+        const vendorRoom = vendorId.toString();
+        const newOrderPayload = { orderId: order._id, status: 'placed', message: 'You have a new order!' };
+        emitToRoom(vendorRoom, 'new-order', newOrderPayload);
+        emitToRoom(`vendor_${vendorRoom}`, 'new-order', newOrderPayload); // frontend join_vendor_room fallback
+        emitToRoom('admin', 'new-order', { orderId: order._id, status: 'placed', message: 'A new order was just placed.' });
 
         // FCM Vendor
         const populatedVendor = await User.findOne({ vendorId }).select('fcmToken');
@@ -614,15 +479,10 @@ class OrderService {
 
         // Notify driver on assignment
         if (status === 'accepted' && driverId) { // Changed 'assigned' to 'accepted' based on spec
-            emitToRoom(`delivery_${driverId.toString()}`, 'delivery-assigned', {
-                orderId: order._id,
-                message: 'New delivery task assigned to you'
-            });
-
-            emitToRoom(driverId.toString(), 'delivery-assigned', {
-                orderId: order._id,
-                message: 'New delivery task assigned to you'
-            });
+            // Notify driver: auto-joined their userId room + delivery_${id} room via join_delivery_room event
+            const deliveryPayload = { orderId: order._id, message: 'New delivery task assigned to you' };
+            emitToRoom(driverId.toString(), 'delivery-assigned', deliveryPayload);
+            emitToRoom(`delivery_${driverId.toString()}`, 'delivery-assigned', deliveryPayload); // frontend join_delivery_room fallback
 
             const driverUser = await User.findById(driverId).select('fcmToken');
             if (driverUser && driverUser.fcmToken) {

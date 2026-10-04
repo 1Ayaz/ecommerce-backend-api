@@ -1,5 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const OrderService = require('../services/OrderService');
+const Order = require('../models/Order');
 
 // @desc    Place a new order
 // @route   POST /api/orders
@@ -27,7 +28,6 @@ const previewOrder = asyncHandler(async (req, res) => {
 // @desc    Get all orders (admin only)
 // @route   GET /api/orders
 const getAllOrders = asyncHandler(async (req, res) => {
-    const Order = require('../models/Order');
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
@@ -61,7 +61,6 @@ const getAllOrders = asyncHandler(async (req, res) => {
 // @desc    Get order history for logged-in customer
 // @route   GET /api/orders/history
 const getOrderHistory = asyncHandler(async (req, res) => {
-    const Order = require('../models/Order'); // Still need for lean query here
     const orders = await Order.find({ customerId: req.user._id })
         .populate('vendorId', 'name')
         .sort({ placedAt: -1 });
@@ -71,7 +70,6 @@ const getOrderHistory = asyncHandler(async (req, res) => {
 // @desc    Get single order details
 // @route   GET /api/orders/:id
 const getOrderById = asyncHandler(async (req, res) => {
-    const Order = require('../models/Order');
     const order = await Order.findById(req.params.id)
         .populate('vendorId', 'name')
         .populate('customerId', 'name phone deliveryPin');

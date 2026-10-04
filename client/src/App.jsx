@@ -4,6 +4,7 @@ import { useState, useEffect, lazy, Suspense } from 'react';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import useAuthStore from './store/useAuthStore';
+import useWishlistStore from './store/useWishlistStore';
 import API from './config/api';
 import Header from './components/Header';
 import MobileBottomNav from './components/MobileBottomNav';
@@ -23,6 +24,7 @@ const StaffLogin = lazy(() => import('./pages/StaffLogin'));
 const CustomerDashboard = lazy(() => import('./pages/CustomerDashboard'));
 const PaymentPage = lazy(() => import('./pages/PaymentPage'));
 const CategoryPage = lazy(() => import('./pages/CategoryPage'));
+const WishlistPage = lazy(() => import('./pages/WishlistPage'));
 
 // ─── Lazy-loaded heavy components ───
 const LocationPicker = lazy(() => import('./components/LocationPicker'));
@@ -99,6 +101,8 @@ function AppContent({ locationData, setLocationData, showLocationPicker, setShow
   useEffect(() => {
     if (user?._id) {
       subscribeToPushNotifications();
+      // Fetch wishlist from server (server-synced, industry standard)
+      useWishlistStore.getState().fetch();
       // Sync fresh profile from API on mount
       const syncProfile = async () => {
         const freshUser = await fetchProfile();
@@ -114,6 +118,9 @@ function AppContent({ locationData, setLocationData, showLocationPicker, setShow
         }
       };
       syncProfile();
+    } else {
+      // Clear wishlist on logout
+      useWishlistStore.getState().clear();
     }
   }, [user?._id]);
 
@@ -173,6 +180,7 @@ function AppContent({ locationData, setLocationData, showLocationPicker, setShow
             <Route path="/search" element={<CustomerOnly user={user}><SearchPage /></CustomerOnly>} />
             <Route path="/categories" element={<CustomerOnly user={user}><CategoriesPage /></CustomerOnly>} />
             <Route path="/category/:slug" element={<CustomerOnly user={user}><CategoryPage /></CustomerOnly>} />
+            <Route path="/wishlist" element={<CustomerOnly user={user}><WishlistPage /></CustomerOnly>} />
             <Route path="/staff-login" element={<StaffLogin />} />
             <Route
               path="/dashboard"

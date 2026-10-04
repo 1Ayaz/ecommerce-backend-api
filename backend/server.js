@@ -90,6 +90,9 @@ app.use('/api/users', require('./routes/userRoutes'));
 // Wishlist Routes
 app.use('/api/wishlist', require('./routes/wishlistRoutes'));
 
+// Rating Routes
+app.use('/api/ratings', require('./routes/ratingRoutes'));
+
 
 // --------------- Error Handler ---------------
 app.use(require('./middleware/errorMiddleware'));

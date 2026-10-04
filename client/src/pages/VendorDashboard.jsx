@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Package, Clock, User, Phone, MapPin, CheckCircle, XCircle, Store, Users, ShoppingBag, LayoutDashboard, LogOut, FolderTree, BarChart3, Tag, FileText, Settings, Truck, Navigation } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Package, Clock, User, Phone, MapPin, CheckCircle, XCircle, Store, Users, ShoppingBag, LayoutDashboard, LogOut, FolderTree, BarChart3, Tag, FileText, Settings, Truck, Navigation, Power, Volume2, VolumeX } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import API from '../config/api';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -17,11 +17,12 @@ import AuditLogViewer from '../components/AuditLogViewer';
 import SettingsPanel from '../components/SettingsPanel';
 import DeliveryPricingPanel from '../components/DeliveryPricingPanel';
 import DriverManagement from '../components/DriverManagement';
+import AdminOrdersTable from '../components/AdminOrdersTable';
 
 export default function VendorDashboard() {
     const { user, logout } = useAuthStore();
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('orders');
+    const [activeTab, setActiveTab] = useState(user.role === 'vendor' ? 'orders' : 'all-orders');
     const [orders, setOrders] = useState([]);
     const [drivers, setDrivers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -29,6 +30,67 @@ export default function VendorDashboard() {
 
     // Quick stats
     const [stats, setStats] = useState({ totalOrders: 0, totalRevenue: 0, pendingOrders: 0 });
+
+    // ── Store open/close toggle (vendor only) ──
+    const [storeOpen, setStoreOpen] = useState(true);
+    const [storeToggleLoading, setStoreToggleLoading] = useState(false);
+    const vendorId = user.vendorId?._id || user.vendorId;
+
+    // ── Audio alert for new orders ──
+    const audioRef = useRef(null);
+    const [audioEnabled, setAudioEnabled] = useState(false);
+
+    const enableAudio = () => {
+        // Play a silent audio once — this unlocks browser autoplay for future alerts
+        try {
+            audioRef.current = new Audio();
+            audioRef.current.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+            audioRef.current.play().then(() => setAudioEnabled(true)).catch(() => {});
+        } catch { }
+    };
+
+    const playNewOrderAlert = () => {
+        if (!audioEnabled) return;
+        try {
+            // Use a short beep via Web Audio API — no external file needed
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(880, ctx.currentTime);
+            oscillator.frequency.setValueAtTime(1100, ctx.currentTime + 0.1);
+            gainNode.gain.setValueAtTime(0.4, ctx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+            oscillator.start(ctx.currentTime);
+            oscillator.stop(ctx.currentTime + 0.5);
+        } catch { }
+    };
+
+    // Fetch store's current isOpen status on mount (vendor only)
+    useEffect(() => {
+        if (user.role === 'vendor' && vendorId) {
+            API.get(`/stores/${vendorId}`)
+                .then(res => setStoreOpen(res.data.data?.isOpen !== false))
+                .catch(() => {});
+        }
+    }, [vendorId]);
+
+    const handleStoreToggle = async () => {
+        if (!vendorId) return;
+        setStoreToggleLoading(true);
+        const newState = !storeOpen;
+        try {
+            await API.put(`/stores/${vendorId}`, { isOpen: newState });
+            setStoreOpen(newState);
+            toast.success(newState ? '🟢 Store is now OPEN' : '🔴 Store is now CLOSED');
+        } catch {
+            toast.error('Failed to update store status');
+        } finally {
+            setStoreToggleLoading(false);
+        }
+    };
 
     useEffect(() => {
         if (activeTab === 'orders' || activeTab === 'overview') {
@@ -64,12 +126,15 @@ export default function VendorDashboard() {
 
         socket.on('new-order', (data) => {
             console.log('Live new order received:', data);
-            toast.success(`🚨 New Order Received! #${data.orderId?.slice(-6) || ''}`, {
+            // 1. Play audio alert
+            playNewOrderAlert();
+            // 2. Toast notification
+            toast.success(`🚨 New Order! #${data.orderId?.slice(-6) || ''}`, {
                 icon: '🛍️',
                 style: { borderRadius: '16px', fontWeight: 'bold' },
-                autoClose: 5000,
+                autoClose: 8000,
             });
-            // Refresh orders if we are looking at them or overview
+            // 3. Refresh order list
             if (activeTab === 'orders' || activeTab === 'overview') {
                 fetchOrders();
             }
@@ -96,6 +161,7 @@ export default function VendorDashboard() {
             });
         } catch (error) {
             console.error('Failed to fetch orders:', error);
+            toast.error('Failed to load orders');
         } finally {
             setLoading(false);
         }
@@ -123,7 +189,7 @@ export default function VendorDashboard() {
             await API.put(`/orders/${orderId}/status`, { status });
             fetchOrders();
         } catch (error) {
-            alert('Failed to update status');
+            toast.error(error?.response?.data?.message || 'Failed to update order status');
         }
     };
 
@@ -132,7 +198,7 @@ export default function VendorDashboard() {
             await API.put(`/orders/${orderId}/assign-driver`, { driverId });
             fetchOrders();
         } catch (error) {
-            alert('Failed to assign driver');
+            toast.error('Failed to assign delivery partner');
         }
     };
 
@@ -145,6 +211,7 @@ export default function VendorDashboard() {
         const colors = {
             placed: 'bg-yellow-100 text-yellow-800',
             accepted: 'bg-blue-100 text-blue-800',
+            assigned: 'bg-purple-100 text-purple-800',
             out_for_delivery: 'bg-indigo-100 text-indigo-800',
             delivered: 'bg-green-100 text-green-800',
             cancelled: 'bg-red-100 text-red-800',
@@ -153,7 +220,8 @@ export default function VendorDashboard() {
     };
 
     const tabs = [
-        { id: 'overview', label: 'Overview', icon: BarChart3, roles: ['admin'] },
+        { id: 'all-orders', label: 'All Orders', icon: ShoppingBag, roles: ['admin'] },
+        { id: 'overview', label: 'Analytics', icon: BarChart3, roles: ['admin', 'vendor'] },
         { id: 'orders', label: 'Orders', icon: ShoppingBag, roles: ['vendor'] },
         { id: 'products', label: user.role === 'vendor' ? 'Inventory' : 'Products', icon: Package, roles: ['admin', 'vendor'] },
         { id: 'coupons', label: 'Coupons', icon: Tag, roles: ['vendor'] },
@@ -240,7 +308,7 @@ export default function VendorDashboard() {
             {/* Main Content */}
             <main className="flex-1 p-4 md:p-10 max-w-6xl mx-auto w-full">
                 <AnimatePresence mode="wait">
-                    {/* Overview / Dashboard Tab (Admin) */}
+                    {/* Overview / Analytics Tab (Admin + Vendor) */}
                     {activeTab === 'overview' && (
                         <motion.div
                             key="overview"
@@ -248,7 +316,19 @@ export default function VendorDashboard() {
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
                         >
-                            <AnalyticsDashboard />
+                            {/* Pass vendorId so vendor sees only their store data */}
+                            <AnalyticsDashboard vendorId={user.role === 'vendor' ? vendorId : null} />
+                        </motion.div>
+                    )}
+
+                    {activeTab === 'all-orders' && (
+                        <motion.div
+                            key="all-orders"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                        >
+                            <AdminOrdersTable />
                         </motion.div>
                     )}
 
@@ -260,7 +340,51 @@ export default function VendorDashboard() {
                             exit={{ opacity: 0, y: -10 }}
                             className="space-y-6"
                         >
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+                            {/* ── Store Open/Close Toggle ── */}
+                            {user.role === 'vendor' && (
+                                <div className={`flex items-center justify-between p-4 rounded-2xl border-2 transition-all ${storeOpen ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${storeOpen ? 'bg-emerald-500' : 'bg-red-400'}`}>
+                                            <Power size={18} className="text-white" />
+                                        </div>
+                                        <div>
+                                            <p className={`text-sm font-black ${storeOpen ? 'text-emerald-800' : 'text-red-800'}`}>
+                                                Store is {storeOpen ? 'OPEN' : 'CLOSED'}
+                                            </p>
+                                            <p className={`text-[10px] font-bold ${storeOpen ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                {storeOpen ? 'Customers can place orders' : 'No new orders will be accepted'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        {/* Audio enable button */}
+                                        <button
+                                            onClick={enableAudio}
+                                            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black transition-all ${
+                                                audioEnabled ? 'bg-emerald-100 text-emerald-700' : 'bg-white border border-gray-200 text-gray-400 hover:text-secondary'
+                                            }`}
+                                            title={audioEnabled ? 'Sound alerts ON' : 'Click to enable sound alerts'}
+                                        >
+                                            {audioEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+                                            <span className="hidden sm:inline">{audioEnabled ? 'Sound ON' : 'Enable Sound'}</span>
+                                        </button>
+                                        {/* Toggle */}
+                                        <button
+                                            onClick={handleStoreToggle}
+                                            disabled={storeToggleLoading}
+                                            className={`relative w-14 h-7 rounded-full transition-all duration-300 disabled:opacity-50 ${
+                                                storeOpen ? 'bg-emerald-500' : 'bg-red-400'
+                                            }`}
+                                        >
+                                            <div className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-all duration-300 ${
+                                                storeOpen ? 'left-7' : 'left-0.5'
+                                            }`} />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                                 <div>
                                     <h1 className="text-2xl font-black text-brand-dark">Live Orders</h1>
                                     <p className="text-sm text-brand-muted font-medium">Manage incoming orders and fulfillment</p>

@@ -28,7 +28,7 @@ router.get('/history', protect, getOrderHistory);
 
 // Parameterized routes
 router.get('/:id', protect, validateMongoId, getOrderById);
-router.put('/:id/status', protect, authorize('vendor'), validateMongoId, validateOrderStatus, updateOrderStatus);
+router.put('/:id/status', protect, authorize('vendor', 'admin'), validateMongoId, validateOrderStatus, updateOrderStatus);
 router.put('/:id/assign-driver', protect, authorize('vendor'), restrictToOwnVendor, validateMongoId, assignDriver);
 
 module.exports = router;

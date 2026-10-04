@@ -3,7 +3,7 @@ import {
     User, MapPin, ShoppingBag, LogOut, ChevronRight, Plus, Trash2, Edit2,
     Loader2, RotateCcw, ArrowLeft, ShieldCheck, Phone, Mail, Package,
     HelpCircle, FileText, Lock, Settings, MessageSquare, Truck, ChevronDown, ChevronUp, X,
-    Home, Briefcase, MoreHorizontal
+    Home, Briefcase, MoreHorizontal, Heart, Star
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,6 +11,7 @@ import API from '../config/api';
 import useAuthStore from '../store/useAuthStore';
 import useCartStore from '../store/useCartStore';
 import { toast } from 'react-toastify';
+import RatingModal from '../components/RatingModal';
 
 export default function CustomerDashboard() {
     const navigate = useNavigate();
@@ -26,6 +27,11 @@ export default function CustomerDashboard() {
     const [expandedSection, setExpandedSection] = useState(null);
     const [editingProfile, setEditingProfile] = useState(false);
     const [editForm, setEditForm] = useState({ name: '', email: '', phone: '' });
+    const [confirmDeleteId, setConfirmDeleteId] = useState(null); // inline delete confirm
+
+    // Rating modal state
+    const [ratingOrder, setRatingOrder] = useState(null); // the order being rated
+    const [ratedOrderIds, setRatedOrderIds] = useState(new Set()); // track which orders are rated
 
     // Add address form
     const [showAddAddress, setShowAddAddress] = useState(false);
@@ -72,7 +78,11 @@ export default function CustomerDashboard() {
     };
 
     const handleDeleteAddress = async (id) => {
-        if (!window.confirm('Delete this address?')) return;
+        if (confirmDeleteId !== id) {
+            setConfirmDeleteId(id); // first tap: show confirm
+            return;
+        }
+        setConfirmDeleteId(null);
         try {
             await API.delete(`/users/addresses/${id}`);
             setAddresses(prev => prev.filter(a => a._id !== id));
@@ -152,6 +162,20 @@ export default function CustomerDashboard() {
     const ongoingOrders = orders.filter(o => !['delivered', 'cancelled', 'rejected'].includes(o.status));
     const pastOrders = orders.filter(o => ['delivered', 'cancelled', 'rejected'].includes(o.status));
 
+    // Mark rated orders on initial load
+    useEffect(() => {
+        if (pastOrders.length === 0) return;
+        const deliveredIds = pastOrders.filter(o => o.status === 'delivered').map(o => o._id);
+        if (deliveredIds.length === 0) return;
+        // Batch-check which are already rated
+        Promise.all(deliveredIds.map(id =>
+            API.get(`/ratings/check/${id}`).then(r => ({ id, rated: r.data.data?.rated }))
+        )).then(results => {
+            const ratedSet = new Set(results.filter(r => r.rated).map(r => r.id));
+            setRatedOrderIds(ratedSet);
+        }).catch(() => {});
+    }, [orders.length]);
+
     const handleLogout = () => {
         logout();
         navigate('/');
@@ -166,6 +190,7 @@ export default function CustomerDashboard() {
     }
 
     return (
+        <>
         <div className="min-h-screen bg-gray-50/80 pb-24 md:pb-12">
             <div className="max-w-lg mx-auto px-4 pt-6">
 
@@ -216,6 +241,22 @@ export default function CustomerDashboard() {
                             </div>
                         </div>
                     )}
+
+                    {/* Quick Actions row */}
+                    <div className="flex gap-2 mb-5">
+                        <button
+                            onClick={() => navigate('/wishlist')}
+                            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-red-50 rounded-xl text-xs font-bold text-[#D11243] hover:bg-red-100 transition-colors border border-red-100"
+                        >
+                            <Heart size={14} className="fill-[#D11243]" /> My Wishlist
+                        </button>
+                        <button
+                            onClick={() => toggleSection('orders')}
+                            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gray-50 rounded-xl text-xs font-bold text-secondary hover:bg-gray-100 transition-colors"
+                        >
+                            <ShoppingBag size={14} /> Order History
+                        </button>
+                    </div>
 
                     {/* Edit Profile Toggle */}
                     <AnimatePresence>
@@ -329,10 +370,26 @@ export default function CustomerDashboard() {
                                             </div>
                                             <p className="text-[11px] text-slate-400">{new Date(order.createdAt).toLocaleDateString()}</p>
                                         </div>
-                                        <button onClick={() => handleReorder(order)}
-                                            className="flex items-center gap-1 text-[11px] font-bold text-[#D11243] hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors">
-                                            <RotateCcw size={12} /> Reorder
-                                        </button>
+                                        <div className="flex items-center gap-1.5">
+                                            {/* Rate button — only for delivered & not yet rated */}
+                                            {order.status === 'delivered' && !ratedOrderIds.has(order._id) && (
+                                                <button
+                                                    onClick={() => setRatingOrder(order)}
+                                                    className="flex items-center gap-1 text-[10px] font-bold text-yellow-600 hover:bg-yellow-50 px-2.5 py-1.5 rounded-lg transition-colors border border-yellow-100"
+                                                >
+                                                    <Star size={11} className="fill-yellow-500 text-yellow-500" /> Rate
+                                                </button>
+                                            )}
+                                            {ratedOrderIds.has(order._id) && (
+                                                <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 px-2.5 py-1.5 rounded-lg bg-emerald-50">
+                                                    <Star size={11} className="fill-emerald-500 text-emerald-500" /> Rated
+                                                </span>
+                                            )}
+                                            <button onClick={() => handleReorder(order)}
+                                                className="flex items-center gap-1 text-[11px] font-bold text-[#D11243] hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors">
+                                                <RotateCcw size={12} /> Reorder
+                                            </button>
+                                        </div>
                                     </div>
                                     <div className="space-y-1">
                                         {order.items?.map((item, idx) => (
@@ -459,10 +516,17 @@ export default function CustomerDashboard() {
                                                 </p>
                                             </div>
                                         </div>
-                                        <button onClick={() => handleDeleteAddress(addr._id)}
-                                            className="p-2 text-slate-200 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
-                                            <Trash2 size={14} />
-                                        </button>
+                                        {confirmDeleteId === addr._id ? (
+                                            <button onClick={() => handleDeleteAddress(addr._id)}
+                                                className="px-2 py-1 text-[10px] font-black text-red-500 bg-red-50 rounded-lg border border-red-200 hover:bg-red-100 transition-colors whitespace-nowrap">
+                                                Confirm?
+                                            </button>
+                                        ) : (
+                                            <button onClick={() => handleDeleteAddress(addr._id)}
+                                                className="p-2 text-slate-200 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+                                                <Trash2 size={14} />
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -485,6 +549,20 @@ export default function CustomerDashboard() {
                 <p className="text-center text-[10px] text-slate-300 font-medium pb-4">Mubarak Fresh Chicken • v1.0</p>
             </div>
         </div>
+
+        {/* ── Rating Modal ── */}
+        <RatingModal
+            isOpen={!!ratingOrder}
+            onClose={() => setRatingOrder(null)}
+            order={ratingOrder}
+            onRated={() => {
+                if (ratingOrder) {
+                    setRatedOrderIds(prev => new Set([...prev, ratingOrder._id]));
+                }
+                setRatingOrder(null);
+            }}
+        />
+        </>
     );
 }
 

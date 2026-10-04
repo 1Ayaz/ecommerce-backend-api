@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Package, MapPin, Phone, MessageCircle, User, CheckCircle, LogOut, Home, IndianRupee, Power, Clock, ChevronDown } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Package, MapPin, Phone, MessageCircle, User, CheckCircle, LogOut, Home, IndianRupee, Power, Clock, ChevronDown, Volume2, VolumeX } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import API from '../config/api';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,6 +11,7 @@ export default function DeliveryDashboard() {
     const navigate = useNavigate();
     const { user, logout } = useAuthStore();
     const [orders, setOrders] = useState([]);
+    const ordersRef = useRef([]); // To access latest orders in socket/geolocation callbacks
     const [loading, setLoading] = useState(true);
     const [isOnline, setIsOnline] = useState(user?.isOnline ?? true);
     const [earnings, setEarnings] = useState({ todayDeliveries: 0, todayEarnings: 0, weeklyEarnings: 0 });
@@ -21,6 +22,39 @@ export default function DeliveryDashboard() {
     const [showOtpModal, setShowOtpModal] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [otpInput, setOtpInput] = useState('');
+
+    // 🔔 Audio alert for new delivery assignments
+    const audioRef = useRef(null);
+    const [audioEnabled, setAudioEnabled] = useState(false);
+
+    const enableAudio = () => {
+        if (!audioRef.current) {
+            // Play a 0-length silent audio to unlock browser autoplay policy
+            audioRef.current = new Audio();
+            audioRef.current.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+            audioRef.current.play().then(() => setAudioEnabled(true)).catch(() => {});
+        }
+    };
+
+    const playDeliveryAlert = () => {
+        if (!audioEnabled) return;
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            // Two-tone chime: lower then higher
+            [660, 880].forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.value = freq;
+                osc.type = 'sine';
+                gain.gain.setValueAtTime(0.6, ctx.currentTime + i * 0.18);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.18 + 0.35);
+                osc.start(ctx.currentTime + i * 0.18);
+                osc.stop(ctx.currentTime + i * 0.18 + 0.35);
+            });
+        } catch (e) {}
+    };
 
     useEffect(() => {
         fetchOrders();
@@ -51,6 +85,7 @@ export default function DeliveryDashboard() {
 
         socket.on('delivery-assigned', (data) => {
             console.log('Live delivery assigned:', data);
+            playDeliveryAlert(); // 🔔 Chime alert
             toast.success(`🛵 New Delivery Assigned! #${data.orderId?.slice(-6) || ''}`, {
                 icon: '🛵',
                 style: { borderRadius: '16px', fontWeight: 'bold' },
@@ -58,6 +93,27 @@ export default function DeliveryDashboard() {
             });
             fetchOrders(); // Immediately pull new assignment
         });
+
+        // Live GPS Tracking for Out For Delivery orders
+        let watchId = null;
+        if (navigator.geolocation) {
+            watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    // Emit for every active out_for_delivery order
+                    const activeOrders = ordersRef.current.filter(o => o.status === 'out_for_delivery');
+                    activeOrders.forEach(order => {
+                        socket.emit('driver_location', {
+                            orderId: order._id,
+                            lat: latitude,
+                            lng: longitude
+                        });
+                    });
+                },
+                (error) => console.warn('GPS error:', error),
+                { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+            );
+        }
 
         // Polling fallback just in case
         const interval = setInterval(() => {
@@ -67,6 +123,7 @@ export default function DeliveryDashboard() {
         return () => {
             clearInterval(interval);
             socket.disconnect();
+            if (watchId !== null) navigator.geolocation.clearWatch(watchId);
         };
     }, [isOnline]);
 
@@ -79,6 +136,7 @@ export default function DeliveryDashboard() {
             }
             const response = await API.get('/delivery/orders');
             setOrders(response.data.data || []);
+            ordersRef.current = response.data.data || [];
         } catch (error) {
             console.error('Failed to fetch orders:', error);
         } finally {
@@ -191,6 +249,14 @@ export default function DeliveryDashboard() {
                                 }`}
                         >
                             <Power size={14} /> {isOnline ? 'Online' : 'Offline'}
+                        </button>
+                        {/* Sound alert toggle */}
+                        <button
+                            onClick={enableAudio}
+                            className={`flex items-center gap-1 px-2 py-2 rounded-xl text-xs font-bold transition-all ${audioEnabled ? 'bg-emerald-100 text-emerald-700' : 'bg-white border border-gray-200 text-gray-400 hover:text-slate-600'}`}
+                            title={audioEnabled ? 'Sound alerts ON' : 'Tap to enable sound alerts'}
+                        >
+                            {audioEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
                         </button>
                         <button
                             onClick={() => { logout(); navigate('/staff-login'); }}

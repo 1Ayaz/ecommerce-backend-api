@@ -139,11 +139,11 @@ class AnalyticsService {
     /**
      * Store Analytics — per-store revenue, commission, payouts
      */
-    static async getStoreAnalytics(period = '30d') {
+    static async getStoreAnalytics(period = '30d', vendorId = null) {
         const startDate = this._getStartDate(period);
 
         const storeOrders = await Order.aggregate([
-            { $match: { createdAt: { $gte: startDate } } },
+            { $match: { createdAt: { $gte: startDate }, ...(vendorId ? { vendorId: new mongoose.Types.ObjectId(vendorId) } : {}) } },
             {
                 $group: {
                     _id: '$vendorId',

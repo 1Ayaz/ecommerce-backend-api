@@ -9,6 +9,7 @@ import useCartStore from '../store/useCartStore';
 import useWishlistStore from '../store/useWishlistStore';
 import LoginSheet from '../components/LoginSheet';
 import { ProductJsonLd, BreadcrumbJsonLd } from '../components/JsonLd';
+import ReviewCard from '../components/ReviewCard';
 
 export default function ProductDetail() {
     const { id } = useParams();
@@ -23,13 +24,20 @@ export default function ProductDetail() {
     const [selectedVariation, setSelectedVariation] = useState(0);
     const [showFullDesc, setShowFullDesc] = useState(false);
     const [activeImage, setActiveImage] = useState(0);
+    const [ratings, setRatings] = useState([]);
+    const [avgRating, setAvgRating] = useState(0);
 
     useEffect(() => {
         const fetchProduct = async () => {
             try {
                 setLoading(true);
-                const res = await API.get(`/products/${id}`);
+                const [res, ratingRes] = await Promise.all([
+                    API.get(`/products/${id}`),
+                    API.get(`/ratings/product/${id}`).catch(() => ({ data: { data: { ratings: [], averageRating: 0 } } }))
+                ]);
                 setProduct(res.data.data);
+                setRatings(ratingRes.data.data.ratings || []);
+                setAvgRating(ratingRes.data.data.averageRating || 0);
             } catch (error) {
                 console.error('Failed to fetch product:', error);
             } finally {
@@ -264,6 +272,34 @@ export default function ProductDetail() {
                                 </motion.div>
                             )}
                         </AnimatePresence>
+                    </div>
+                )}
+
+                {/* ── Ratings & Reviews ── */}
+                {ratings.length > 0 && (
+                    <div className="px-4 mt-8">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-sm font-bold text-secondary">Customer Reviews</h3>
+                            <div className="flex items-center gap-1 bg-yellow-50 text-yellow-600 px-2 py-1 rounded-md text-xs font-bold">
+                                <span>{avgRating}</span>
+                                <span>★</span>
+                            </div>
+                        </div>
+                        <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory">
+                            {ratings.map((review, i) => {
+                                const transformedReview = {
+                                    author_name: review.customerId?.name || "Customer",
+                                    rating: review.rating,
+                                    text: review.comment || "Great product!",
+                                    relative_time_description: new Date(review.createdAt).toLocaleDateString()
+                                };
+                                return (
+                                    <div key={i} className="w-[75vw] sm:w-80 flex-shrink-0 snap-start">
+                                        <ReviewCard review={transformedReview} />
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 )}
             </div>

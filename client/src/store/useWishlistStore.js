@@ -1,61 +1,74 @@
 import { create } from 'zustand';
 import API from '../config/api';
 
-const STORAGE_KEY = 'mubarak_wishlist';
-
+/**
+ * useWishlistStore — server-synced wishlist (industry standard — works across devices).
+ *
+ * Call fetch() once on login. Uses a Set for O(1) isWishlisted() checks.
+ * All toggle operations are optimistic (instant UI) then synced to server.
+ */
 const useWishlistStore = create((set, get) => ({
-    items: JSON.parse(localStorage.getItem(STORAGE_KEY)) || [],
-    synced: false,
+    items: [],          // Full product objects populated from server
+    ids: new Set(),     // productId strings for fast lookup
+    loading: false,
+    fetched: false,     // Guard against double-fetching
 
-    // Toggle wishlist (add if not present, remove if present)
-    toggle: async (productId) => {
-        const items = get().items;
-        const exists = items.includes(productId);
-        let newItems;
+    // Fetch from server — call once on login
+    fetch: async () => {
+        if (get().fetched) return;
+        set({ loading: true });
+        try {
+            const { data } = await API.get('/wishlist');
+            const products = (data.data?.productIds || []).filter(Boolean);
+            const ids = new Set(products.map(p =>
+                typeof p === 'string' ? p : p._id?.toString()
+            ));
+            set({ items: products, ids, fetched: true });
+        } catch {
+            // Non-critical — silently fail
+        } finally {
+            set({ loading: false });
+        }
+    },
 
-        if (exists) {
-            newItems = items.filter((id) => id !== productId);
+    // Optimistic toggle
+    toggle: async (product) => {
+        const id = product._id?.toString() || product?.toString();
+        const already = get().ids.has(id);
+
+        // Immediate local update
+        const newIds = new Set(get().ids);
+        if (already) {
+            newIds.delete(id);
+            set({ ids: newIds, items: get().items.filter(p => (p._id?.toString() || p?.toString()) !== id) });
         } else {
-            newItems = [...items, productId];
+            newIds.add(id);
+            set({ ids: newIds, items: [...get().items, product] });
         }
 
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(newItems));
-        set({ items: newItems });
-
-        // Sync with backend (fire & forget)
+        // Sync to server
         try {
-            if (exists) {
-                await API.post('/wishlist/remove', { productId });
+            if (already) {
+                await API.post('/wishlist/remove', { productId: id });
             } else {
-                await API.post('/wishlist/add', { productId });
+                await API.post('/wishlist/add', { productId: id });
             }
         } catch {
-            // silently fail — local state is source of truth for guests
+            // Roll back on server error
+            const rollback = new Set(get().ids);
+            if (already) {
+                rollback.add(id);
+                set({ ids: rollback, items: [...get().items, product] });
+            } else {
+                rollback.delete(id);
+                set({ ids: rollback, items: get().items.filter(p => (p._id?.toString() || p?.toString()) !== id) });
+            }
         }
     },
 
-    isWishlisted: (productId) => {
-        return get().items.includes(productId);
-    },
+    isWishlisted: (productId) => get().ids.has(productId?.toString()),
 
-    // Sync local wishlist with API (call on login)
-    sync: async () => {
-        try {
-            const res = await API.get('/wishlist');
-            const apiItems = (res.data.data.productIds || []).map((p) =>
-                typeof p === 'string' ? p : p._id
-            );
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(apiItems));
-            set({ items: apiItems, synced: true });
-        } catch {
-            // Keep local state
-        }
-    },
-
-    clear: () => {
-        localStorage.removeItem(STORAGE_KEY);
-        set({ items: [], synced: false });
-    },
+    clear: () => set({ items: [], ids: new Set(), fetched: false }),
 }));
 
 export default useWishlistStore;

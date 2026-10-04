@@ -11,7 +11,8 @@ const PERIODS = [
     { label: '1Y', value: '1y' },
 ];
 
-export default function AnalyticsDashboard() {
+export default function AnalyticsDashboard({ vendorId = null }) {
+    const isVendorView = !!vendorId;
     const [period, setPeriod] = useState('30d');
     const [loading, setLoading] = useState(true);
     const [kpis, setKpis] = useState({ totalRevenue: 0, totalOrders: 0, avgOrderValue: 0, newCustomers: 0 });
@@ -26,14 +27,17 @@ export default function AnalyticsDashboard() {
     const fetchAnalytics = async () => {
         setLoading(true);
         try {
+            // Append vendorId param when viewing as vendor
+            const suffix = vendorId ? `&vendorId=${vendorId}` : '';
             const [kpiRes, storeRes] = await Promise.all([
-                API.get(`/analytics/dashboard?period=${period}`),
-                API.get(`/analytics/store-analytics?period=${period}`),
+                API.get(`/analytics/dashboard?period=${period}${suffix}`),
+                API.get(`/analytics/store-analytics?period=${period}${suffix}`),
             ]);
             setKpis(kpiRes.data.data);
             setStoreAnalytics(storeRes.data.data);
         } catch (err) {
             console.error('Analytics fetch failed:', err);
+            toast.error('Failed to load analytics');
         } finally {
             setLoading(false);
         }
@@ -76,8 +80,12 @@ export default function AnalyticsDashboard() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl font-black text-brand-dark">Platform Analytics</h1>
-                    <p className="text-sm text-brand-muted font-medium">Store-wise revenue, commission & payouts</p>
+                    <h1 className="text-2xl font-black text-brand-dark">
+                        {isVendorView ? 'My Store Analytics' : 'Platform Analytics'}
+                    </h1>
+                    <p className="text-sm text-brand-muted font-medium">
+                        {isVendorView ? 'Your store revenue and order stats' : 'Store-wise revenue, commission & payouts'}
+                    </p>
                 </div>
                 <div className="flex gap-2 bg-white rounded-2xl p-1 border border-gray-100 shadow-sm">
                     {PERIODS.map(p => (

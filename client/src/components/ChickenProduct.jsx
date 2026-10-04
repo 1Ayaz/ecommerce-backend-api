@@ -1,7 +1,9 @@
-import { Plus, Minus } from 'lucide-react';
+import { Plus, Minus, Heart } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import useCartStore from '../store/useCartStore';
+import useAuthStore from '../store/useAuthStore';
+import useWishlistStore from '../store/useWishlistStore';
 
 /**
  * Universal Product Card — used on Home, Category, Search.
@@ -13,6 +15,9 @@ import useCartStore from '../store/useCartStore';
 export default function ChickenProduct({ product, onShowVariations }) {
     const navigate = useNavigate();
     const { addItem, removeItem, getItemCount } = useCartStore();
+    const { user } = useAuthStore();
+    const { toggle, isWishlisted } = useWishlistStore();
+    const wishlisted = isWishlisted(product._id);
 
     const variations = product.variations || [];
     if (variations.length === 0) return null;
@@ -74,6 +79,21 @@ export default function ChickenProduct({ product, onShowVariations }) {
                     <div className="absolute top-2 left-2 bg-[#D11243] text-white px-2 py-0.5 rounded-lg text-[10px] font-bold shadow-md">
                         {discount}% OFF
                     </div>
+                )}
+
+                {/* Heart / Wishlist button — logged-in users only */}
+                {user && (
+                    <motion.button
+                        whileTap={{ scale: 0.8 }}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggle(product); }}
+                        className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center shadow-md transition-colors hover:bg-white"
+                        aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+                    >
+                        <Heart
+                            size={15}
+                            className={`transition-colors ${wishlisted ? 'text-[#D11243] fill-[#D11243]' : 'text-slate-300'}`}
+                        />
+                    </motion.button>
                 )}
             </div>
 

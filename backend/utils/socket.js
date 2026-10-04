@@ -97,6 +97,16 @@ const initSocket = (server) => {
             console.log(`👤 Socket ${socket.id} explicitly joined room: ${userId}`);
         });
 
+        // ── 4.6 Socket relay for driver_location ──
+        socket.on('driver_location', (data) => {
+            // data should contain { orderId, lat, lng }
+            // The customer on OrderSuccess will join the orderId room to listen for this.
+            if (data && data.orderId) {
+                // Relay to the specific order's room
+                io.to(data.orderId).emit('driver_location', data);
+            }
+        });
+
         socket.on('disconnect', () => {
             console.log(`🔌 Disconnected: ${socket.id}`);
         });

@@ -5,6 +5,17 @@ import { useEffect, useState, useRef } from 'react';
 import { io } from 'socket.io-client';
 import useAuthStore from '../store/useAuthStore';
 import API from '../config/api';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// Fix leaflet default icon in Vite
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
 const STATUS_FLOW = [
     { key: 'placed', label: 'Order Placed', sub: 'Your order has been received', icon: <Package size={20} /> },
@@ -45,6 +56,7 @@ export default function OrderSuccess() {
     const [loading, setLoading] = useState(true);
     const [progress, setProgress] = useState(10);
     const [statusIndex, setStatusIndex] = useState(0);
+    const [driverLocation, setDriverLocation] = useState(null); // { lat, lng }
     const socketRef = useRef(null);
 
     // Persist orderId for page reloads
@@ -107,6 +119,12 @@ export default function OrderSuccess() {
 
                 // Update order data with new status
                 setOrder(prev => prev ? { ...prev, status: data.status, statusTimeline: data.statusTimeline || prev.statusTimeline } : prev);
+            }
+        });
+
+        socket.on('driver_location', (data) => {
+            if (data.orderId === orderId || data.orderId?.toString() === orderId) {
+                setDriverLocation({ lat: data.lat, lng: data.lng });
             }
         });
 
@@ -201,6 +219,34 @@ export default function OrderSuccess() {
                                     ))}
                                 </div>
                             </div>
+
+                            {/* Live Map Tracking */}
+                            {currentStatus === 'out_for_delivery' && driverLocation && (
+                                <div className="mb-12 rounded-2xl overflow-hidden border border-gray-200 shadow-sm h-64 relative z-0">
+                                    <MapContainer
+                                        center={[driverLocation.lat, driverLocation.lng]}
+                                        zoom={14}
+                                        style={{ height: '100%', width: '100%' }}
+                                    >
+                                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                                        
+                                        {/* Driver Marker */}
+                                        <Marker position={[driverLocation.lat, driverLocation.lng]}>
+                                            <Popup>Delivery Partner</Popup>
+                                        </Marker>
+                                        
+                                        {/* Customer Marker */}
+                                        {(order?.deliveryAddress?.location?.lat || order?.deliveryAddress?.lat) && (
+                                            <Marker position={[
+                                                order.deliveryAddress.location?.lat || order.deliveryAddress.lat,
+                                                order.deliveryAddress.location?.lng || order.deliveryAddress.lng
+                                            ]}>
+                                                <Popup>Your Delivery Address</Popup>
+                                            </Marker>
+                                        )}
+                                    </MapContainer>
+                                </div>
+                            )}
 
                             {/* Status Timeline */}
                             <div className="space-y-8">

@@ -4,8 +4,8 @@ const asyncHandler = require('express-async-handler');
 const { protect, authorize } = require('../middleware/authMiddleware');
 const AnalyticsService = require('../services/AnalyticsService');
 
-// All analytics routes are admin-only
-router.use(protect, authorize('admin'));
+// Analytics routes accessible by admin and vendor
+router.use(protect, authorize('admin', 'vendor'));
 
 // GET /api/analytics/dashboard — KPI summary
 router.get('/dashboard', asyncHandler(async (req, res) => {
@@ -46,7 +46,9 @@ router.get('/recent-orders', asyncHandler(async (req, res) => {
 // GET /api/analytics/store-analytics — Per-store revenue, commission, payouts
 router.get('/store-analytics', asyncHandler(async (req, res) => {
     const period = req.query.period || '30d';
-    const data = await AnalyticsService.getStoreAnalytics(period);
+    // Vendors can only see their own store analytics
+    const vendorId = req.user.role === 'vendor' ? (req.user.vendorId?.toString() || req.query.vendorId) : null;
+    const data = await AnalyticsService.getStoreAnalytics(period, vendorId);
     res.json({ success: true, data });
 }));
 

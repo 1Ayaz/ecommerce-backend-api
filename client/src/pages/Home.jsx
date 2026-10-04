@@ -17,6 +17,7 @@ import Footer from '../components/Footer';
 import { LocalBusinessJsonLd } from '../components/JsonLd';
 import { subscribeToPushNotifications } from '../utils/pushHelper';
 import toast from 'react-hot-toast'; // Added for toast messages
+import WhatsAppOrderButton from '../components/WhatsAppOrderButton';
 
 export default function Home({ locationData }) {
     const navigate = useNavigate();
@@ -31,6 +32,8 @@ export default function Home({ locationData }) {
     const [loading, setLoading] = useState(true);
     const [showLogin, setShowLogin] = useState(false);
     const [storeCoupons, setStoreCoupons] = useState([]);
+    const [storeReviews, setStoreReviews] = useState([]);
+    const [storeAverageRating, setStoreAverageRating] = useState(4.8);
 
     // Variations Modal State
     const [selectedProduct, setSelectedProduct] = useState(null);
@@ -57,11 +60,12 @@ export default function Home({ locationData }) {
                     localStorage.setItem('mubarak_vendorId', storeData._id);
                 }
 
-                // Parallel fetch: categories + products + coupons
-                const [catRes, prodRes, couponRes] = await Promise.all([
+                // Parallel fetch: categories + products + coupons + ratings
+                const [catRes, prodRes, couponRes, ratingRes] = await Promise.all([
                     API.get(`/products/categories?vendorId=${storeData._id}`),
                     API.get(`/products?vendorId=${storeData._id}`),
                     API.get(`/coupons/store/${storeData._id}`).catch(() => ({ data: { data: [] } })),
+                    API.get(`/ratings/store/${storeData._id}`).catch(() => ({ data: { data: { ratings: [], averageRating: 4.8 } } })),
                 ]);
 
                 setCategories(catRes.data.data);
@@ -69,6 +73,8 @@ export default function Home({ locationData }) {
                 setProducts(allProds);
                 setBestSellers(allProds.slice(0, 6));
                 setStoreCoupons(couponRes.data.data || []);
+                setStoreReviews(ratingRes.data.data.ratings || []);
+                setStoreAverageRating(ratingRes.data.data.averageRating || 4.8);
             } catch (error) {
                 console.error('Failed to fetch data:', error);
             } finally {
@@ -93,13 +99,6 @@ export default function Home({ locationData }) {
         };
         fetchFiltered();
     }, [activeCategory, store]);
-
-    const reviews = [
-        { author_name: "Ayaz Ahmad", rating: 5, text: "The freshest chicken in Rajahmundry! 20 min delivery is actually true.", relative_time_description: "2 days ago" },
-        { author_name: "Rahul Verma", rating: 5, text: "Licious quality at better prices. The variation sheet is so easy to use.", relative_time_description: "1 week ago" },
-        { author_name: "Suresh Babu", rating: 4, text: "Hand-cut exactly as requested in instructions. Highly recommended.", relative_time_description: "3 days ago" },
-        { author_name: "Meera K.", rating: 5, text: "Cleaned so well, saved me 30 mins of prep time. Authentic taste!", relative_time_description: "5 days ago" },
-    ];
 
 
 
@@ -256,7 +255,7 @@ export default function Home({ locationData }) {
                         <div className="flex gap-3 overflow-x-auto pb-3 scrollbar-hide snap-x snap-mandatory py-2">
                             {storeCoupons.map((coupon, i) => (
                                 <button key={i}
-                                    onClick={() => { navigator.clipboard.writeText(coupon.code); }}
+                                    onClick={() => { navigator.clipboard.writeText(coupon.code).then(() => toast.success(`"${coupon.code}" copied!`)).catch(() => toast.error('Could not copy code')); }}
                                     className="w-[48vw] md:w-56 flex-shrink-0 snap-start bg-[#D11243] rounded-xl px-4 py-3 text-white flex items-center gap-3 hover:bg-[#b00f38] transition-colors active:scale-[0.97]"
                                 >
                                     <Tag size={16} className="flex-shrink-0 opacity-70" />
@@ -274,21 +273,32 @@ export default function Home({ locationData }) {
                 )}
 
                 {/* Reviews — Horizontal scroll */}
-                <section className="mb-10 md:mb-14">
-                    <div className="flex items-center justify-between mb-4 md:mb-8">
-                        <h3 className="text-base md:text-xl font-black text-brand-dark uppercase tracking-tighter">What our fans say</h3>
-                        <div className="bg-brand-green/10 text-brand-green px-3 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase">
-                            Google Reviews 4.8★
-                        </div>
-                    </div>
-                    <div className="flex gap-3 md:gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory py-2">
-                        {reviews.map((review, i) => (
-                            <div key={i} className="w-[80vw] md:w-96 flex-shrink-0 snap-start">
-                                <ReviewCard review={review} />
+                {storeReviews.length > 0 && (
+                    <section className="mb-10 md:mb-14">
+                        <div className="flex items-center justify-between mb-4 md:mb-8">
+                            <h3 className="text-base md:text-xl font-black text-brand-dark uppercase tracking-tighter">What our fans say</h3>
+                            <div className="bg-brand-green/10 text-brand-green px-3 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase">
+                                Google Reviews {storeAverageRating}★
                             </div>
-                        ))}
-                    </div>
-                </section>
+                        </div>
+                        <div className="flex gap-3 md:gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory py-2">
+                            {storeReviews.map((review, i) => {
+                                // Transform backend review object to match ReviewCard's expected props
+                                const transformedReview = {
+                                    author_name: review.customerId?.name || "Customer",
+                                    rating: review.rating,
+                                    text: review.comment || "Great product and delivery!",
+                                    relative_time_description: new Date(review.createdAt).toLocaleDateString()
+                                };
+                                return (
+                                    <div key={i} className="w-[80vw] md:w-96 flex-shrink-0 snap-start">
+                                        <ReviewCard review={transformedReview} />
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </section>
+                )}
 
                 {/* Sticky Cart */}
                 <StickyCart
@@ -312,6 +322,9 @@ export default function Home({ locationData }) {
             </main>
 
             <Footer />
+
+            {/* Early-launch fallback: tap to order via WhatsApp or call */}
+            <WhatsAppOrderButton />
         </div >
     );
 }
