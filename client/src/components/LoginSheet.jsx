@@ -94,13 +94,7 @@ export default function LoginSheet({ isOpen, onClose }) {
     };
 
     // ── Step 4 (optional): Save name for new users ────────────────────────────
-    const handleSaveName = async (e) => {
-        e.preventDefault();
-        if (!name.trim()) return;
-        // Re-verify with name (re-logging in is fine, token is already saved)
-        // Just close — name update can be done via profile API separately
-        resetAndClose();
-    };
+    const handleSaveName = async (e) => { e.preventDefault(); if (!name.trim()) return; try { const API = (await import('../config/api')).default; await API.put('/users/profile', { name }); await useAuthStore.getState().fetchProfile(); } catch(err) { console.error(err); } resetAndClose(); };
 
     const otpComplete = otp.join('').length === 6;
 
