@@ -139,7 +139,7 @@ class AuthService {
      */
     static async sendOTP(phone) {
         const { generateOTP, saveOTP } = require('../utils/otpStore');
-        const { sendWhatsAppMessage } = require('../utils/whatsapp');
+        const { sendOTPMessage } = require('../utils/whatsapp');
 
         // Normalize: strip everything except digits
         const normalizedPhone = phone.replace(/\D/g, '');
@@ -150,8 +150,9 @@ class AuthService {
         const otp = generateOTP();
         saveOTP(normalizedPhone, otp);
 
-        const message = `Your The Fresh Cuts verification code is: *${otp}*\n\nThis code expires in 5 minutes. Do not share it with anyone.`;
-        await sendWhatsAppMessage(normalizedPhone, message);
+        // Uses the approved "freshcuts_otp" Meta authentication template
+        // This works even if the customer has never messaged your number before
+        await sendOTPMessage(normalizedPhone, otp);
 
         return { success: true, phone: normalizedPhone };
     }
