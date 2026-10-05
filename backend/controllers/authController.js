@@ -149,8 +149,29 @@ const registerVendor = asyncHandler(async (req, res) => {
 const sendOTP = asyncHandler(async (req, res) => {
     const { phone } = req.body;
     if (!phone) { res.status(400); throw new Error('Phone number is required'); }
-    const result = await AuthService.sendOTP(phone);
-    res.status(200).json({ success: true, message: 'OTP sent via WhatsApp', phone: result.phone });
+
+    try {
+        const result = await AuthService.sendOTP(phone);
+        res.status(200).json({ success: true, message: 'OTP sent via WhatsApp', phone: result.phone });
+    } catch (err) {
+        // Meta API errors (template not approved, invalid number, etc.)
+        const metaError = err.response?.data?.error;
+        if (metaError) {
+            // Template not yet approved
+            if (metaError.code === 132000 || metaError.error_subcode === 2494010) {
+                res.status(503);
+                throw new Error('WhatsApp OTP is temporarily unavailable. Please try again in a few minutes.');
+            }
+            // Invalid phone number
+            if (metaError.code === 131030) {
+                res.status(400);
+                throw new Error('This phone number is not registered on WhatsApp.');
+            }
+        }
+        // Generic fallback
+        res.status(500);
+        throw new Error('Failed to send OTP. Please try again shortly.');
+    }
 });
 
 // @desc    Verify OTP and login/register user
