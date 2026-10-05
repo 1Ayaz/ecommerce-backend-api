@@ -30,8 +30,8 @@ const sendOTPMessage = async (to, otpCode) => {
 
         const cleanPhone = to.replace(/\D/g, '');
 
-        // Authentication template payload — Meta requires this specific format
-        // The "freshcuts_otp" template has 1 body param (the OTP) and 1 button param (copy code)
+        // Authentication template payload
+        // Only body component needed — the "Copy code" button auto-populates from body param
         const payload = {
             messaging_product: 'whatsapp',
             recipient_type: 'individual',
@@ -44,13 +44,6 @@ const sendOTPMessage = async (to, otpCode) => {
                     {
                         type: 'body',
                         parameters: [{ type: 'text', text: otpCode }]
-                    },
-                    {
-                        // The "Copy code" button on authentication templates
-                        type: 'button',
-                        sub_type: 'url',
-                        index: '0',
-                        parameters: [{ type: 'text', text: otpCode }]
                     }
                 ]
             }
@@ -60,8 +53,9 @@ const sendOTPMessage = async (to, otpCode) => {
         console.log(`✅ WhatsApp OTP sent to ${cleanPhone}`);
         return result;
     } catch (error) {
-        console.error('❌ Failed to send WhatsApp OTP:', error.response?.data || error.message);
-        throw error; // Re-throw so AuthService can catch it and return proper error to user
+        console.error('❌ Failed to send WhatsApp OTP. Full Meta error:',
+            JSON.stringify(error.response?.data || error.message, null, 2));
+        throw error;
     }
 };
 
