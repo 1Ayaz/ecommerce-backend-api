@@ -2,6 +2,8 @@ import { useState, useRef } from 'react';
 import { X, AlertCircle, Phone, ArrowLeft, ShieldCheck, Zap, Drumstick, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useAuthStore from '../store/useAuthStore';
+import API from '../config/api';
+import { toast } from 'react-hot-toast';
 
 // ─── OLD FLOWS (Google + Email) — kept but commented out for easy re-enable ──
 // import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
@@ -94,7 +96,8 @@ export default function LoginSheet({ isOpen, onClose }) {
     };
 
     // ── Step 4 (optional): Save name for new users ────────────────────────────
-    const handleSaveName = async (e) => { e.preventDefault(); if (!name.trim()) return; try { const API = (await import('../config/api')).default; await API.put('/users/profile', { name }); await useAuthStore.getState().fetchProfile(); } catch(err) { console.error(err); } resetAndClose(); };
+    const handleSaveName = async (e) => { e.preventDefault(); if (!name.trim()) return; try {  await API.put('/users/profile', { name });
+            toast.success('Name saved successfully!'); await useAuthStore.getState().fetchProfile(); } catch(err) { console.error(err); toast.error('Failed to save name'); } resetAndClose(); };
 
     const otpComplete = otp.join('').length === 6;
 
