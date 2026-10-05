@@ -258,6 +258,24 @@ export default function CustomerDashboard() {
                         </button>
                     </div>
 
+                    {/* Contact Support row */}
+                    <div className="flex gap-2 mb-5">
+                        <a
+                            href="tel:+917013693669"
+                            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-blue-50 rounded-xl text-xs font-bold text-blue-600 hover:bg-blue-100 transition-colors border border-blue-100"
+                        >
+                            <Phone size={14} /> Call Support
+                        </a>
+                        <a
+                            href="https://wa.me/917013693669?text=Hi%20The%20Fresh%20Cuts%2C%20I%20need%20help%20with%20my%20order."
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-green-50 rounded-xl text-xs font-bold text-green-600 hover:bg-green-100 transition-colors border border-green-100"
+                        >
+                            <MessageSquare size={14} /> WhatsApp Us
+                        </a>
+                    </div>
+
                     {/* Edit Profile Toggle */}
                     <AnimatePresence>
                         {editingProfile ? (

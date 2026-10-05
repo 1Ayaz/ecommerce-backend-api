@@ -17,7 +17,6 @@ import Footer from '../components/Footer';
 import { LocalBusinessJsonLd } from '../components/JsonLd';
 import { subscribeToPushNotifications } from '../utils/pushHelper';
 import toast from 'react-hot-toast'; // Added for toast messages
-import WhatsAppOrderButton from '../components/WhatsAppOrderButton';
 
 export default function Home({ locationData }) {
     const navigate = useNavigate();
@@ -323,8 +322,6 @@ export default function Home({ locationData }) {
 
             <Footer />
 
-            {/* Early-launch fallback: tap to order via WhatsApp or call */}
-            <WhatsAppOrderButton />
         </div >
     );
 }
