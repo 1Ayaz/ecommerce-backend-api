@@ -25,6 +25,7 @@ const CustomerDashboard = lazy(() => import('./pages/CustomerDashboard'));
 const PaymentPage = lazy(() => import('./pages/PaymentPage'));
 const CategoryPage = lazy(() => import('./pages/CategoryPage'));
 const WishlistPage = lazy(() => import('./pages/WishlistPage'));
+const LegalPage = lazy(() => import('./pages/LegalPage'));
 
 // ─── Lazy-loaded heavy components ───
 const LocationPicker = lazy(() => import('./components/LocationPicker'));
@@ -181,6 +182,11 @@ function AppContent({ locationData, setLocationData, showLocationPicker, setShow
             <Route path="/categories" element={<CustomerOnly user={user}><CategoriesPage /></CustomerOnly>} />
             <Route path="/category/:slug" element={<CustomerOnly user={user}><CategoryPage /></CustomerOnly>} />
             <Route path="/wishlist" element={<CustomerOnly user={user}><WishlistPage /></CustomerOnly>} />
+            
+            {/* Legal Pages */}
+            <Route path="/privacy" element={<LegalPage />} />
+            <Route path="/terms" element={<LegalPage />} />
+            
             <Route path="/staff-login" element={<StaffLogin />} />
             <Route
               path="/dashboard"
