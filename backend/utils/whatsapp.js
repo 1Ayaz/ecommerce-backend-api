@@ -31,7 +31,10 @@ const sendOTPMessage = async (to, otpCode) => {
         const cleanPhone = to.replace(/\D/g, '');
 
         // Authentication template payload
-        // Only body component needed — the "Copy code" button auto-populates from body param
+        // The template "freshcuts_otp" requires TWO body parameters:
+        // 1. The OTP code
+        // 2. The support contact (phone/email)
+        // It ALSO requires the button component array to populate the "Copy code" button.
         const payload = {
             messaging_product: 'whatsapp',
             recipient_type: 'individual',
@@ -43,7 +46,18 @@ const sendOTPMessage = async (to, otpCode) => {
                 components: [
                     {
                         type: 'body',
-                        parameters: [{ type: 'text', text: otpCode }]
+                        parameters: [
+                            { type: 'text', text: otpCode },
+                            { type: 'text', text: '+91 94941 43531' } // Support contact required by template
+                        ]
+                    },
+                    {
+                        type: 'button',
+                        sub_type: 'url',
+                        index: '0',
+                        parameters: [
+                            { type: 'text', text: otpCode }
+                        ]
                     }
                 ]
             }
