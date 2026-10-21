@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Mail, Phone, Calendar, ShoppingBag, Ban, CheckCircle } from 'lucide-react';
+import { Search, Mail, Phone, Calendar, ShoppingBag, MessageCircle, Copy, Check, Users } from 'lucide-react';
 import API from '../config/api';
 import { toast } from 'react-toastify';
 
@@ -7,54 +7,82 @@ export default function CustomerManagement() {
     const [customers, setCustomers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [copied, setCopied] = useState(false);
 
     useEffect(() => {
         fetchCustomers();
     }, []);
 
     const fetchCustomers = async () => {
+        setLoading(true);
         try {
-            // We need a route for this. Assuming we'll add it or use existing user route if available.
-            // For now, let's assume GET /api/users/customers or similar.
-            // Wait, I haven't added this route yet in my plan. I should check userController.
-            // If not, I'll add it.
             const res = await API.get('/users/all?role=customer');
-            setCustomers(res.data.data);
+            setCustomers(res.data.data || []);
         } catch (error) {
             console.error('Failed to fetch customers', error);
-            // detailed error handling
+            toast.error('Failed to load customer list');
         } finally {
             setLoading(false);
         }
     };
 
-    // ... wait, I need to verify if /api/users/all exists or create it. 
-    // I'll assume check userController next. 
-
-    // For now, I will write the component assuming the endpoint exists/will exist.
-
     const filteredCustomers = customers.filter(customer =>
-        customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (customer.name && customer.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (customer.email && customer.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (customer.phone && customer.phone.includes(searchTerm))
     );
+
+    const handleCopyAllPhones = () => {
+        const phoneList = filteredCustomers
+            .map(c => c.phone)
+            .filter(Boolean)
+            .map(p => p.replace(/\D/g, ''))
+            .filter(p => p.length >= 10);
+
+        if (phoneList.length === 0) {
+            toast.error('No phone numbers to copy');
+            return;
+        }
+
+        const text = phoneList.join(', ');
+        navigator.clipboard.writeText(text);
+        setCopied(true);
+        toast.success(`Copied ${phoneList.length} numbers for WhatsApp campaign! 📋`);
+        setTimeout(() => setCopied(false), 3000);
+    };
 
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h2 className="text-2xl font-black text-brand-dark">Customer Management</h2>
-                    <p className="text-sm text-brand-muted">View and manage customer base</p>
+                    <h2 className="text-xl md:text-2xl font-black text-brand-dark flex items-center gap-2">
+                        <Users className="text-[#D11243]" size={24} /> Customer Database
+                    </h2>
+                    <p className="text-xs text-brand-muted mt-0.5">
+                        {customers.length} total customers · View contact details and run WhatsApp marketing campaigns
+                    </p>
                 </div>
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                    <input
-                        type="text"
-                        placeholder="Search customers..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-red/20 w-full sm:w-64"
-                    />
+
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <button
+                        onClick={handleCopyAllPhones}
+                        className="flex items-center gap-2 bg-[#25D366] hover:bg-[#20ba5a] text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 shrink-0"
+                        title="Copy all filtered phone numbers to clipboard for WhatsApp Broadcast"
+                    >
+                        {copied ? <Check size={16} /> : <Copy size={16} />}
+                        {copied ? 'Copied!' : 'Copy Numbers for WhatsApp'}
+                    </button>
+
+                    <div className="relative flex-1 sm:w-60">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                        <input
+                            type="text"
+                            placeholder="Search by name, phone..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#D11243]/20 w-full"
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -64,69 +92,89 @@ export default function CustomerManagement() {
                         <thead className="bg-gray-50 border-b border-gray-100">
                             <tr>
                                 <th className="p-4 text-xs font-black text-brand-muted uppercase tracking-wider">Customer</th>
-                                <th className="p-4 text-xs font-black text-brand-muted uppercase tracking-wider">Contact</th>
+                                <th className="p-4 text-xs font-black text-brand-muted uppercase tracking-wider">Phone / Contact</th>
+                                <th className="p-4 text-xs font-black text-brand-muted uppercase tracking-wider">Orders</th>
                                 <th className="p-4 text-xs font-black text-brand-muted uppercase tracking-wider">Joined</th>
-                                <th className="p-4 text-xs font-black text-brand-muted uppercase tracking-wider">Status</th>
-                                <th className="p-4 text-xs font-black text-brand-muted uppercase tracking-wider">Actions</th>
+                                <th className="p-4 text-xs font-black text-brand-muted uppercase tracking-wider text-right">Quick Contact</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {loading ? (
                                 <tr>
-                                    <td colSpan="5" className="p-8 text-center text-brand-muted">Loading customers...</td>
+                                    <td colSpan="5" className="p-8 text-center text-brand-muted text-xs font-medium">Loading customers...</td>
                                 </tr>
                             ) : filteredCustomers.length === 0 ? (
                                 <tr>
-                                    <td colSpan="5" className="p-8 text-center text-brand-muted">No customers found.</td>
+                                    <td colSpan="5" className="p-8 text-center text-brand-muted text-xs font-medium">No customers found.</td>
                                 </tr>
                             ) : (
-                                filteredCustomers.map(customer => (
-                                    <tr key={customer._id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="p-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-brand-bg flex items-center justify-center text-brand-red font-bold">
-                                                    {customer.name.charAt(0).toUpperCase()}
-                                                </div>
-                                                <div>
-                                                    <p className="font-bold text-brand-dark text-sm">{customer.name}</p>
-                                                    <p className="text-xs text-brand-muted">ID: {customer._id.slice(-6)}</p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="p-4">
-                                            <div className="space-y-1">
-                                                <div className="flex items-center gap-2 text-xs text-brand-muted">
-                                                    <Mail size={14} />
-                                                    {customer.email}
-                                                </div>
-                                                {customer.phone && (
-                                                    <div className="flex items-center gap-2 text-xs text-brand-muted">
-                                                        <Phone size={14} />
-                                                        {customer.phone}
+                                filteredCustomers.map(customer => {
+                                    const cleanPhone = (customer.phone || '').replace(/\D/g, '');
+                                    const fullPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+                                    return (
+                                        <tr key={customer._id} className="hover:bg-gray-50/60 transition-colors">
+                                            <td className="p-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-9 h-9 rounded-full bg-red-50 text-[#D11243] font-black text-xs flex items-center justify-center shrink-0">
+                                                        {(customer.name || 'U').charAt(0).toUpperCase()}
                                                     </div>
+                                                    <div>
+                                                        <p className="font-bold text-brand-dark text-sm leading-tight">{customer.name || 'Unnamed Customer'}</p>
+                                                        <p className="text-[10px] text-brand-muted">PIN: {customer.deliveryPin || '—'}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="p-4">
+                                                <div className="space-y-0.5">
+                                                    {customer.phone ? (
+                                                        <div className="flex items-center gap-1.5 text-xs font-bold text-brand-dark">
+                                                            <Phone size={13} className="text-gray-400" />
+                                                            +{customer.phone}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-xs text-gray-400">No phone</span>
+                                                    )}
+                                                    {customer.email && (
+                                                        <div className="flex items-center gap-1.5 text-[11px] text-brand-muted">
+                                                            <Mail size={12} className="text-gray-400" />
+                                                            {customer.email}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="p-4">
+                                                <div className="text-xs">
+                                                    <span className="font-black text-brand-dark">{customer.orderCount ?? '—'}</span>
+                                                    <span className="text-brand-muted text-[10px] ml-1">orders</span>
+                                                    {customer.totalSpent ? (
+                                                        <p className="text-[10px] font-bold text-emerald-600">₹{customer.totalSpent.toFixed(0)} spent</p>
+                                                    ) : null}
+                                                </div>
+                                            </td>
+                                            <td className="p-4 text-xs text-brand-muted">
+                                                <div className="flex items-center gap-1.5">
+                                                    <Calendar size={13} className="text-gray-400" />
+                                                    {customer.createdAt ? new Date(customer.createdAt).toLocaleDateString() : '—'}
+                                                </div>
+                                            </td>
+                                            <td className="p-4 text-right">
+                                                {cleanPhone ? (
+                                                    <a
+                                                        href={`https://wa.me/${fullPhone}?text=${encodeURIComponent(`Hello ${customer.name || ''}, greetings from The Fresh Cuts!`)}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex items-center gap-1.5 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366] hover:text-white px-3 py-1.5 rounded-xl font-bold text-xs transition-all"
+                                                        title="Message customer on WhatsApp"
+                                                    >
+                                                        <MessageCircle size={14} /> WhatsApp
+                                                    </a>
+                                                ) : (
+                                                    <span className="text-xs text-gray-300">—</span>
                                                 )}
-                                            </div>
-                                        </td>
-                                        <td className="p-4 text-sm text-brand-muted">
-                                            <div className="flex items-center gap-2">
-                                                <Calendar size={14} />
-                                                {new Date(customer.createdAt).toLocaleDateString()}
-                                            </div>
-                                        </td>
-                                        <td className="p-4">
-                                            <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${customer.isActive !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                                                }`}>
-                                                {customer.isActive !== false ? 'Active' : 'Banned'}
-                                            </span>
-                                        </td>
-                                        <td className="p-4">
-                                            <button className="text-brand-muted hover:text-brand-dark transition-colors" title="View Details">
-                                                <ShoppingBag size={18} />
-                                            </button>
-                                            {/* Add ban/unban logic later */}
-                                        </td>
-                                    </tr>
-                                ))
+                                            </td>
+                                        </tr>
+                                    );
+                                })
                             )}
                         </tbody>
                     </table>

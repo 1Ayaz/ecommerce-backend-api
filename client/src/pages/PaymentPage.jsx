@@ -28,6 +28,14 @@ export default function PaymentPage() {
     const [enabledMethods, setEnabledMethods] = useState([{ id: 'COD', label: 'Cash on Delivery', sub: 'Pay when your order arrives', icon: Banknote }]);
     const [methodsLoading, setMethodsLoading] = useState(true);
 
+    // Guard: Require login to access payment
+    useEffect(() => {
+        if (!user) {
+            toast.error('Please login to place an order');
+            navigate('/checkout');
+        }
+    }, [user, navigate]);
+
     // ─── Fetch enabled payment methods from admin settings ───────────────
     useEffect(() => {
         API.get('/settings/public')

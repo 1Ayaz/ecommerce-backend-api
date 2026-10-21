@@ -16,7 +16,7 @@ const { protect, authorize } = require('../middleware/authMiddleware');
 router.post('/subscribe', protect, subscribeUser);
 router.post('/fcm-token', protect, saveFcmToken);
 
-router.get('/all', protect, authorize('admin'), getUsers);
+router.get('/all', protect, authorize('admin', 'vendor'), getUsers);
 
 router.route('/profile')
     .get(protect, getUserProfile)

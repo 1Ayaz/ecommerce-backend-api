@@ -229,7 +229,7 @@ export default function VendorDashboard() {
         { id: 'delivery-pricing', label: 'Delivery', icon: Truck, roles: ['vendor'] },
         { id: 'categories', label: 'Categories', icon: FolderTree, roles: ['admin'] },
         { id: 'stores', label: 'Stores', icon: Store, roles: ['admin'] },
-        { id: 'customers', label: 'Customers', icon: Users, roles: ['admin'] },
+        { id: 'customers', label: 'Customers', icon: Users, roles: ['admin', 'vendor'] },
         { id: 'users', label: 'Staff/Vendors', icon: Users, roles: ['admin'] },
         { id: 'audit-logs', label: 'Audit Logs', icon: FileText, roles: ['admin'] },
         { id: 'settings', label: 'Settings', icon: Settings, roles: ['admin'] },

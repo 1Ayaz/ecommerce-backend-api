@@ -401,7 +401,7 @@ class OrderService {
      * Update order status with forward-only transition guard
      */
     static async updateStatus(orderId, status, driverId, user, otp) {
-        const order = await Order.findById(orderId).populate('customerId', 'name phone fcmToken deliveryPin');
+        const order = await Order.findById(orderId).populate('customerId', 'name phone fcmToken deliveryPin').populate('vendorId', 'name');
         if (!order) throw new ApiError(404, 'Order not found');
 
         // (duplicate check removed), Admins can manage all
@@ -454,7 +454,8 @@ class OrderService {
             try {
                 const { sendWhatsAppMessage } = require('../utils/whatsapp');
                 const pin = order.customerId?.deliveryPin;
-                const msg = `🛵 *Order Out for Delivery!*\n\nYour order from The Fresh Cuts is on the way.\n\nPlease share this secure PIN with your delivery partner to collect your order: *${pin}*`;
+                const storeName = order.vendorId?.name ? ` (${order.vendorId.name})` : '';
+                const msg = `🛵 *Order Out for Delivery!*\n\nYour order from The Fresh Cuts${storeName} is on the way.\n\nPlease share this secure PIN with your delivery partner to collect your order: *${pin}*`;
                 sendWhatsAppMessage(order.customerId.phone, msg).catch(e => console.error(e));
             } catch(e) {} 
         }

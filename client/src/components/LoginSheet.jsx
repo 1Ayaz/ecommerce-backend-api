@@ -3,14 +3,7 @@ import { X, AlertCircle, Phone, ArrowLeft, ShieldCheck, Zap, Drumstick, MessageC
 import { motion, AnimatePresence } from 'framer-motion';
 import useAuthStore from '../store/useAuthStore';
 import API from '../config/api';
-import { toast } from 'react-hot-toast';
-
-// ─── OLD FLOWS (Google + Email) — kept but commented out for easy re-enable ──
-// import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
-// const handleGoogleLogin = async () => { ... };
-// const handleEmailLogin = async (e) => { ... };
-// const handleEmailSignUp = async (e) => { ... };
-// ─────────────────────────────────────────────────────────────────────────────
+import { toast } from 'react-toastify';
 
 export default function LoginSheet({ isOpen, onClose }) {
     const { sendOTP, verifyOTP, loading, error, clearError } = useAuthStore();
@@ -25,16 +18,14 @@ export default function LoginSheet({ isOpen, onClose }) {
 
     if (!isOpen) return null;
 
-    // Format phone for display
-    const formatPhoneDisplay = (p) => {
-        const digits = p.replace(/\D/g, '');
-        if (digits.length <= 5) return digits;
-        return `${digits.slice(0, 5)} ${digits.slice(5, 10)}`;
-    };
-
     const resetAndClose = () => {
-        setView('phone'); setPhone(''); setOtp(['', '', '', '', '', '']);
-        setName(''); setIsNewUser(false); clearError(); onClose();
+        setView('phone');
+        setPhone('');
+        setOtp(['', '', '', '', '', '']);
+        setName('');
+        setIsNewUser(false);
+        clearError();
+        onClose();
     };
 
     // ── Step 1: Send OTP ──────────────────────────────────────────────────────
@@ -85,7 +76,7 @@ export default function LoginSheet({ isOpen, onClose }) {
         try {
             clearError();
             const result = await verifyOTP(normalizedPhone, code, name || undefined);
-            // If new user (no name set yet), ask for name first
+            // If new user or placeholder UserXXX name, mandate name entry
             if (!result.user.name || result.user.name.startsWith('User')) {
                 setIsNewUser(true);
                 setView('name');
@@ -95,19 +86,34 @@ export default function LoginSheet({ isOpen, onClose }) {
         } catch { /* error shown from store */ }
     };
 
-    // ── Step 4 (optional): Save name for new users ────────────────────────────
-    const handleSaveName = async (e) => { e.preventDefault(); if (!name.trim()) return; try {  await API.put('/users/profile', { name });
-            toast.success('Name saved successfully!'); await useAuthStore.getState().fetchProfile(); } catch(err) { console.error(err); toast.error('Failed to save name'); } resetAndClose(); };
+    // ── Step 4: Save name for new users (Mandatory) ───────────────────────────
+    const handleSaveName = async (e) => {
+        e.preventDefault();
+        const cleanName = name.trim();
+        if (!cleanName) {
+            toast.error('Please enter your full name');
+            return;
+        }
+        try {
+            await API.put('/users/profile', { name: cleanName });
+            toast.success('Welcome to The Fresh Cuts! 🎉');
+            await useAuthStore.getState().fetchProfile();
+            resetAndClose();
+        } catch (err) {
+            console.error(err);
+            toast.error('Failed to save name. Please try again.');
+        }
+    };
 
     const otpComplete = otp.join('').length === 6;
 
     // Dynamic header text per view
-    const headerTitle = view === 'otp' ? 'Enter OTP' : view === 'name' ? 'One last thing!' : 'Login / Sign up';
+    const headerTitle = view === 'otp' ? 'Enter OTP' : view === 'name' ? 'What is your name?' : 'Login / Sign up';
     const headerSub = view === 'otp'
         ? `Sent to +${normalizedPhone}`
         : view === 'name'
-            ? 'Tell us your name'
-            : 'Fresh chicken, delivered in 20 mins';
+            ? 'Required for delivery orders'
+            : 'Fresh cuts, delivered in 20 mins';
 
     return (
         <AnimatePresence>
@@ -117,7 +123,13 @@ export default function LoginSheet({ isOpen, onClose }) {
                     <motion.div
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                         className="fixed inset-0 bg-black/60 z-[99999] backdrop-blur-sm"
-                        onClick={resetAndClose}
+                        onClick={() => {
+                            if (view === 'name' && !name.trim()) {
+                                toast.info('Please enter your name to complete sign up');
+                                return;
+                            }
+                            resetAndClose();
+                        }}
                     />
 
                     {/* Sheet */}
@@ -137,8 +149,16 @@ export default function LoginSheet({ isOpen, onClose }) {
                             </div>
 
                             {/* Close */}
-                            <button onClick={resetAndClose}
-                                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-all z-10">
+                            <button
+                                onClick={() => {
+                                    if (view === 'name' && !name.trim()) {
+                                        toast.info('Please enter your name to complete sign up');
+                                        return;
+                                    }
+                                    resetAndClose();
+                                }}
+                                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-all z-10"
+                            >
                                 <X size={16} />
                             </button>
 
@@ -210,16 +230,6 @@ export default function LoginSheet({ isOpen, onClose }) {
                                                 </div>
                                             ))}
                                         </div>
-
-                                        {/* ── OLD FLOWS commented out — uncomment to re-enable ──
-                                        <div className="flex items-center gap-3 py-1">
-                                            <div className="flex-1 h-px bg-gray-100" />
-                                            <span className="text-[10px] text-slate-300 font-bold uppercase tracking-widest">or</span>
-                                            <div className="flex-1 h-px bg-gray-100" />
-                                        </div>
-                                        <button onClick={handleGoogleLogin} className="w-full bg-white border-2 border-gray-200 ...">Continue with Google</button>
-                                        <button onClick={() => setView('email-login')} className="w-full bg-[#D11243] ...">Continue with Email</button>
-                                        ── END OLD FLOWS ── */}
                                     </form>
                                 )}
 
@@ -263,22 +273,20 @@ export default function LoginSheet({ isOpen, onClose }) {
                                     </form>
                                 )}
 
-                                {/* ══ VIEW: Name input for new users ══ */}
+                                {/* ══ VIEW: Name input for new users (MANDATORY) ══ */}
                                 {view === 'name' && (
                                     <form onSubmit={handleSaveName} className="space-y-4">
-                                        <p className="text-sm text-slate-500 text-center">What should we call you?</p>
+                                        <p className="text-sm text-slate-500 text-center font-medium">
+                                            Please enter your name so delivery drivers know who to deliver to:
+                                        </p>
                                         <input
                                             type="text" value={name} onChange={(e) => setName(e.target.value)}
-                                            placeholder="Your full name" autoFocus
+                                            placeholder="Your full name (e.g. Rahul Sharma)" autoFocus required
                                             className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl px-4 py-4 text-sm font-semibold text-gray-900 placeholder:text-slate-300 focus:ring-2 focus:ring-[#D11243]/10 focus:border-[#D11243]/30 focus:bg-white outline-none transition-all"
                                         />
                                         <button type="submit" disabled={!name.trim()}
                                             className="w-full bg-[#D11243] hover:bg-[#b00f38] text-white font-bold py-4 rounded-2xl transition-all disabled:opacity-50 active:scale-[0.98] shadow-lg shadow-red-200/40">
-                                            Let's go! 🚀
-                                        </button>
-                                        <button type="button" onClick={resetAndClose}
-                                            className="w-full text-xs text-slate-400 hover:text-slate-600 font-medium py-1">
-                                            Skip for now
+                                            Save & Continue 🚀
                                         </button>
                                     </form>
                                 )}

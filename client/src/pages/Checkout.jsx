@@ -100,6 +100,16 @@ export default function Checkout() {
 
     // ─── Navigate to payment page ───
     const handleMakePayment = () => {
+        if (!user) {
+            setShowLogin(true);
+            toast.error('Please login with your WhatsApp number to checkout');
+            return;
+        }
+        if (!user.name || user.name.startsWith('User')) {
+            setShowLogin(true);
+            toast.info('Please enter your full name before placing order');
+            return;
+        }
         if (!selectedAddr) {
             setShowAddrSheet(true);
             toast.error('Please select a delivery address');

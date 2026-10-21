@@ -31,6 +31,24 @@ const saveFcmToken = asyncHandler(async (req, res) => {
 // @route   GET /api/users/all
 // @access  Private/Admin
 const getUsers = asyncHandler(async (req, res) => {
+    if (req.user.role === 'vendor') {
+        const Order = require('../models/Order');
+        const vendorId = req.user.vendorId || req.userVendorId;
+        if (!vendorId) return res.json({ success: true, count: 0, data: [] });
+
+        const customerIds = await Order.find({ vendorId }).distinct('customerId');
+        const customers = await User.find({ _id: { $in: customerIds } }).select('-password').sort({ createdAt: -1 }).lean();
+        const vendorOrders = await Order.find({ vendorId }).select('customerId totalAmount').lean();
+        const enriched = customers.map(c => {
+            const userOrders = vendorOrders.filter(o => o.customerId?.toString() === c._id.toString());
+            return {
+                ...c,
+                orderCount: userOrders.length,
+                totalSpent: userOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0),
+            };
+        });
+        return res.json({ success: true, count: enriched.length, data: enriched });
+    }
     const filter = {};
     if (req.query.role) filter.role = req.query.role;
 
