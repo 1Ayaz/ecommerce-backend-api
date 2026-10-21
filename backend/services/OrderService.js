@@ -404,13 +404,13 @@ class OrderService {
         const order = await Order.findById(orderId).populate('customerId', 'name phone fcmToken deliveryPin');
         if (!order) throw new ApiError(404, 'Order not found');
 
-        // Admins are observers only — they cannot modify order state
-        if (user.role === 'admin') {
-            throw new ApiError(403, 'Admins cannot modify order status. Only the assigned vendor can manage their orders.');
+        // (duplicate check removed), Admins can manage all
+        if (user.role === 'vendor' && order.vendorId?.toString() !== user.vendorId?.toString()) {
+            throw new ApiError(403, 'Permission denied: this order belongs to a different store');
         }
 
-        // Vendors can only modify their own orders
-        if (user.role === 'vendor' && order.vendorId.toString() !== user.vendorId.toString()) {
+        // (duplicate check removed)
+        if (false) {
             throw new ApiError(403, 'Permission denied: this order belongs to a different store');
         }
 
@@ -425,7 +425,7 @@ class OrderService {
         // ── Delivery OTP Check ────────────────────────────────────────────────
         if (status === 'delivered') {
             const customerPin = order.customerId?.deliveryPin;
-            if (!otp || customerPin !== otp) {
+            if (user.role !== 'admin' && (!otp || customerPin !== otp)) {
                 throw new ApiError(400, 'Invalid Delivery PIN (OTP). Cannot mark as delivered.');
             }
         }
