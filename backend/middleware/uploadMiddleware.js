@@ -2,12 +2,26 @@ const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
 
-// Configure Cloudinary SDK from env vars
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+// Configure Cloudinary SDK from env vars (cleaning quotes/whitespace or using CLOUDINARY_URL)
+const cloud_name = (process.env.CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_NAME || process.env.CLOUD_NAME || '').replace(/['"]/g, '').trim();
+const api_key = (process.env.CLOUDINARY_API_KEY || process.env.API_KEY || '').replace(/['"]/g, '').trim();
+const api_secret = (process.env.CLOUDINARY_API_SECRET || process.env.API_SECRET || '').replace(/['"]/g, '').trim();
+
+if (process.env.CLOUDINARY_URL) {
+    cloudinary.config();
+} else if (cloud_name && api_key && api_secret) {
+    cloudinary.config({
+        cloud_name,
+        api_key,
+        api_secret,
+    });
+} else {
+    cloudinary.config({
+        cloud_name,
+        api_key,
+        api_secret,
+    });
+}
 
 // Store uploaded files directly in Cloudinary (no local disk)
 const storage = new CloudinaryStorage({

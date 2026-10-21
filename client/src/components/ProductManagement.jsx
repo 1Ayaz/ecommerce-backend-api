@@ -31,7 +31,10 @@ export default function ProductManagement({ storeId }) {
             const { data } = await API.post('/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } });
             setFormData(prev => ({ ...prev, image: data.url }));
             toast.success('Image uploaded');
-        } catch { toast.error('Image upload failed. Check Cloudinary settings.'); }
+        } catch (err) {
+            const errorMsg = err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || 'Image upload failed. Check Cloudinary settings.';
+            toast.error(errorMsg);
+        }
         finally { setImageUploading(false); }
     };
 
@@ -298,7 +301,7 @@ export default function ProductManagement({ storeId }) {
                                                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                                                                 <button type="button" onClick={() => fileInputRef.current?.click()} className="bg-white text-brand-dark text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 hover:bg-gray-100 transition-all">
                                                                     {imageUploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
-                                                                    {imageUploading ? 'Uploading�' : 'Replace'}
+                                                                    {imageUploading ? 'Uploading…' : 'Replace'}
                                                                 </button>
                                                                 <button type="button" onClick={() => setFormData(p => ({ ...p, image: '' }))} className="bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 hover:bg-red-600 transition-all">
                                                                     <X size={12} /> Remove
@@ -307,17 +310,17 @@ export default function ProductManagement({ storeId }) {
                                                         </div>
                                                     ) : (
                                                         <button type="button" onClick={() => fileInputRef.current?.click()} className="w-full h-28 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-2 hover:border-brand-red/40 hover:bg-red-50/30 transition-all group">
-                                                            {imageUploading ? (<><Loader2 size={22} className="animate-spin text-brand-red" /><span className="text-xs text-brand-muted font-bold">Uploading�</span></>) : (<><ImageIcon size={22} className="text-gray-300 group-hover:text-brand-red transition-colors" /><span className="text-xs text-gray-400 font-bold group-hover:text-brand-red transition-colors">Click to upload image</span><span className="text-[10px] text-gray-300">JPG, PNG, WebP � max 5MB</span></>)}
+                                                            {imageUploading ? (<><Loader2 size={22} className="animate-spin text-brand-red" /><span className="text-xs text-brand-muted font-bold">Uploading…</span></>) : (<><ImageIcon size={22} className="text-gray-300 group-hover:text-brand-red transition-colors" /><span className="text-xs text-gray-400 font-bold group-hover:text-brand-red transition-colors">Click to upload image</span><span className="text-[10px] text-gray-300">JPG, PNG, WebP · max 5MB</span></>)}
                                                         </button>
                                                     )}
-                                                    <input type="url" value={formData.image} onChange={e => setFormData({ ...formData, image: e.target.value })} placeholder="Or paste image URL�" className="mt-2 w-full bg-brand-bg rounded-xl px-4 py-2 text-xs font-medium border border-transparent focus:border-brand-red/20 outline-none transition-all text-gray-500 placeholder:text-gray-300" />
+                                                    <input type="url" value={formData.image} onChange={e => setFormData({ ...formData, image: e.target.value })} placeholder="Or paste image URL…" className="mt-2 w-full bg-brand-bg rounded-xl px-4 py-2 text-xs font-medium border border-transparent focus:border-brand-red/20 outline-none transition-all text-gray-500 placeholder:text-gray-300" />
                                                 </div>
                                             </div>
                                             <div className="space-y-4">
                                                 <div>
                                                     <label className="block text-xs font-black text-brand-muted uppercase mb-1">Description</label>
                                                     <textarea className="w-full bg-brand-bg rounded-xl px-4 py-3 text-sm font-medium border-2 border-transparent focus:border-brand-red/10 outline-none transition-all h-[80px]"
-                                                        value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Fresh • Cleaned • Cut After Order" />
+                                                        value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Fresh â€¢ Cleaned â€¢ Cut After Order" />
                                                 </div>
                                                 <div>
                                                     <label className="block text-xs font-black text-brand-muted uppercase mb-1">Short Description</label>
@@ -332,7 +335,7 @@ export default function ProductManagement({ storeId }) {
                                             </div>
                                         </div>
 
-                                        {/* ── Visibility Toggles ── */}
+                                        {/* â”€â”€ Visibility Toggles â”€â”€ */}
                                         <div className="bg-brand-bg/50 rounded-2xl p-4 border border-gray-100">
                                             <h4 className="text-sm font-black text-brand-dark uppercase tracking-widest mb-3">Visibility & Controls</h4>
                                             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -351,7 +354,7 @@ export default function ProductManagement({ storeId }) {
                                             </div>
                                         </div>
 
-                                        {/* ── Seller Details ── */}
+                                        {/* â”€â”€ Seller Details â”€â”€ */}
                                         {formData.showSellerDetails && (
                                             <div className="bg-brand-bg/50 rounded-2xl p-4 border border-gray-100">
                                                 <h4 className="text-sm font-black text-brand-dark uppercase tracking-widest mb-3">Seller Info</h4>
@@ -402,18 +405,18 @@ export default function ProductManagement({ storeId }) {
                                                         </div>
                                                     </div>
                                                     <div className="flex-1 min-w-[80px]">
-                                                        <label className="block text-[10px] font-black text-brand-muted uppercase mb-1">Price (₹)</label>
+                                                        <label className="block text-[10px] font-black text-brand-muted uppercase mb-1">Price (â‚¹)</label>
                                                         <input required type="number"
                                                             className="w-full bg-white rounded-lg px-3 py-2 text-xs font-bold border-2 border-transparent focus:border-brand-red/10 outline-none transition-all"
                                                             value={v.basePrice} onChange={e => handleVariationChange(index, 'basePrice', e.target.value)} />
                                                     </div>
                                                     {isAdmin && (
                                                         <div className="flex-1 min-w-[80px]">
-                                                            <label className="block text-[10px] font-black text-brand-muted uppercase mb-1">Sale Price (₹)</label>
+                                                            <label className="block text-[10px] font-black text-brand-muted uppercase mb-1">Sale Price (â‚¹)</label>
                                                             <input type="number"
                                                                 className="w-full bg-white rounded-lg px-3 py-2 text-xs font-bold border-2 border-transparent focus:border-brand-red/10 outline-none transition-all"
                                                                 value={v.discountedPrice} onChange={e => handleVariationChange(index, 'discountedPrice', e.target.value)}
-                                                                placeholder="—" />
+                                                                placeholder="â€”" />
                                                         </div>
                                                     )}
                                                 </div>
@@ -494,8 +497,8 @@ export default function ProductManagement({ storeId }) {
                                     <div className="text-right">
                                         {firstVar && (
                                             <>
-                                                <p className="text-xs font-black text-brand-dark">₹{firstVar.discountedPrice || firstVar.basePrice || firstVar.price}</p>
-                                                {firstVar.discountedPrice && <p className="text-[10px] text-slate-400 line-through">₹{firstVar.basePrice || firstVar.price}</p>}
+                                                <p className="text-xs font-black text-brand-dark">â‚¹{firstVar.discountedPrice || firstVar.basePrice || firstVar.price}</p>
+                                                {firstVar.discountedPrice && <p className="text-[10px] text-slate-400 line-through">â‚¹{firstVar.basePrice || firstVar.price}</p>}
                                                 <p className="text-[10px] text-brand-muted font-bold uppercase">{firstVar.label}</p>
                                             </>
                                         )}
