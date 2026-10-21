@@ -67,6 +67,7 @@ body {
   font-family: 'Outfit', sans-serif;
   background-color: var(--bg-premium);
   color: var(--secondary);
+  overflow-x: hidden; /* Prevent horizontal scroll / mobile layout flash */
   margin: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

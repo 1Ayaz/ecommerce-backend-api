@@ -98,7 +98,7 @@ export default function OrderSuccess() {
 
         const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
         const envUrl = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '');
-        const socketUrl = envUrl || (isLocal ? 'http://localhost:5000' : 'https://ecommerce-backend-api-qzgf.onrender.com');
+        const socketUrl = envUrl || (isLocal ? 'http://localhost:5000' : 'https://the-fresh-cuts.onrender.com');
         const socket = io(socketUrl, {
             auth: { token: localToken },
             transports: ['websocket', 'polling']

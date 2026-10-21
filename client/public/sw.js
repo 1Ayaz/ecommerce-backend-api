@@ -36,3 +36,8 @@ self.addEventListener('notificationclick', function (event) {
         })
     );
 });
+
+self.addEventListener('fetch', function(event) {
+    // Empty fetch handler to satisfy Chrome PWA install requirements
+});
+

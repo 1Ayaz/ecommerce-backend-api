@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Save, X, Package, Loader2, Info, Star, Eye, EyeOff } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Plus, Edit2, Trash2, Save, X, Package, Loader2, Info, Star, Eye, EyeOff, Upload, ImageIcon } from 'lucide-react';
 import API from '../config/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
@@ -15,6 +15,25 @@ export default function ProductManagement({ storeId }) {
     const [loading, setLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(null);
     const [showAddForm, setShowAddForm] = useState(false);
+
+    // Image upload state
+    const [imageUploading, setImageUploading] = useState(false);
+    const fileInputRef = useRef(null);
+
+    /** Upload a file to Cloudinary via our backend and set formData.image */
+    const handleImageUpload = async (file) => {
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) { toast.error('Image must be under 5MB'); return; }
+        setImageUploading(true);
+        try {
+            const form = new FormData();
+            form.append('image', file);
+            const { data } = await API.post('/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+            setFormData(prev => ({ ...prev, image: data.url }));
+            toast.success('Image uploaded');
+        } catch { toast.error('Image upload failed. Check Cloudinary settings.'); }
+        finally { setImageUploading(false); }
+    };
 
     // Default 3 fixed variations
     const DEFAULT_VARIATIONS = [
@@ -269,10 +288,29 @@ export default function ProductManagement({ storeId }) {
                                                         ))}
                                                     </select>
                                                 </div>
+                                                {/* Image Upload */}
                                                 <div>
-                                                    <label className="block text-xs font-black text-brand-muted uppercase mb-1">Image URL</label>
-                                                    <input required className="w-full bg-brand-bg rounded-xl px-4 py-3 text-sm font-medium border-2 border-transparent focus:border-brand-red/10 outline-none transition-all"
-                                                        value={formData.image} onChange={e => setFormData({ ...formData, image: e.target.value })} placeholder="https://..." />
+                                                    <label className="block text-xs font-black text-brand-muted uppercase mb-1">Product Image</label>
+                                                    <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e => handleImageUpload(e.target.files[0])} />
+                                                    {formData.image ? (
+                                                        <div className="relative group rounded-xl overflow-hidden border-2 border-gray-100 h-28">
+                                                            <img src={formData.image} alt="Product" className="w-full h-full object-cover" />
+                                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                                                <button type="button" onClick={() => fileInputRef.current?.click()} className="bg-white text-brand-dark text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 hover:bg-gray-100 transition-all">
+                                                                    {imageUploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+                                                                    {imageUploading ? 'Uploading…' : 'Replace'}
+                                                                </button>
+                                                                <button type="button" onClick={() => setFormData(p => ({ ...p, image: '' }))} className="bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 hover:bg-red-600 transition-all">
+                                                                    <X size={12} /> Remove
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <button type="button" onClick={() => fileInputRef.current?.click()} className="w-full h-28 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-2 hover:border-brand-red/40 hover:bg-red-50/30 transition-all group">
+                                                            {imageUploading ? (<><Loader2 size={22} className="animate-spin text-brand-red" /><span className="text-xs text-brand-muted font-bold">Uploading…</span></>) : (<><ImageIcon size={22} className="text-gray-300 group-hover:text-brand-red transition-colors" /><span className="text-xs text-gray-400 font-bold group-hover:text-brand-red transition-colors">Click to upload image</span><span className="text-[10px] text-gray-300">JPG, PNG, WebP · max 5MB</span></>)}
+                                                        </button>
+                                                    )}
+                                                    <input type="url" value={formData.image} onChange={e => setFormData({ ...formData, image: e.target.value })} placeholder="Or paste image URL…" className="mt-2 w-full bg-brand-bg rounded-xl px-4 py-2 text-xs font-medium border border-transparent focus:border-brand-red/20 outline-none transition-all text-gray-500 placeholder:text-gray-300" />
                                                 </div>
                                             </div>
                                             <div className="space-y-4">

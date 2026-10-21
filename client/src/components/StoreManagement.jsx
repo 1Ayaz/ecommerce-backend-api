@@ -1,34 +1,30 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Edit2, Trash2, Loader2, X, Store, MapPin, Navigation } from 'lucide-react';
+import { Plus, Edit2, Trash2, Loader2, X, Store, MapPin, Navigation, Hexagon } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import '@geoman-io/leaflet-geoman-free';
+import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
 import API from '../config/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
 
-/**
- * Generates a GeoJSON Polygon (square) around a center point given a radius in km.
- * This is used as the store's serviceArea for geo-intersection queries.
- */
-function buildServiceAreaPolygon(lat, lng, radiusKm) {
-    const R = 111.32; // km per degree latitude
-    const dLat = radiusKm / R;
-    const dLng = radiusKm / (R * Math.cos((lat * Math.PI) / 180));
+// Fix leaflet default icon in Vite
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
-    const minLng = lng - dLng;
-    const maxLng = lng + dLng;
-    const minLat = lat - dLat;
-    const maxLat = lat + dLat;
-
-    return {
-        type: 'Polygon',
-        coordinates: [[
-            [minLng, minLat],
-            [maxLng, minLat],
-            [maxLng, maxLat],
-            [minLng, maxLat],
-            [minLng, minLat], // close the ring
-        ]],
-    };
-}
+const storeIcon = new L.Icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41],
+});
 
 const DEFAULT_FORM = {
     name: '',
@@ -43,6 +39,163 @@ const DEFAULT_FORM = {
     isActive: true,
 };
 
+/**
+ * Builds a GeoJSON polygon from lat/lng + radiusKm (circle approximation with 32 points).
+ * This is used when no custom polygon is drawn.
+ */
+function buildCirclePolygon(lat, lng, radiusKm) {
+    const R = 111.32; // km per degree latitude
+    const points = 32;
+    const coords = [];
+    for (let i = 0; i <= points; i++) {
+        const angle = (i / points) * 2 * Math.PI;
+        const dLat = (radiusKm / R) * Math.cos(angle);
+        const dLng = (radiusKm / (R * Math.cos((lat * Math.PI) / 180))) * Math.sin(angle);
+        coords.push([lng + dLng, lat + dLat]);
+    }
+    return { type: 'Polygon', coordinates: [coords] };
+}
+
+/**
+ * StoreMapEditor — inner component that lives inside MapContainer.
+ * Handles:
+ *  - Draggable store center marker
+ *  - Geoman polygon draw/edit controls
+ *  - Circle overlay for radius reference
+ */
+function StoreMapEditor({ lat, lng, radiusKm, onCenterMove, onPolygonChange, existingPolygon }) {
+    const map = useMap();
+    const markerRef = useRef(null);
+    const circleRef = useRef(null);
+    const polygonLayerRef = useRef(null);
+    const geomanReady = useRef(false);
+
+    // Re-center map when coords change from outside
+    useEffect(() => {
+        map.setView([lat, lng]);
+    }, [lat, lng, map]);
+
+    // Update circle radius overlay
+    useEffect(() => {
+        if (circleRef.current) {
+            circleRef.current.setLatLng([lat, lng]);
+            circleRef.current.setRadius(radiusKm * 1000);
+        } else {
+            circleRef.current = L.circle([lat, lng], {
+                radius: radiusKm * 1000,
+                color: '#3B82F6',
+                fillColor: '#3B82F6',
+                fillOpacity: 0.08,
+                weight: 1.5,
+                dashArray: '6 4',
+            }).addTo(map);
+        }
+    }, [lat, lng, radiusKm, map]);
+
+    // Set up Geoman controls once
+    useEffect(() => {
+        if (geomanReady.current) return;
+        geomanReady.current = true;
+
+        map.pm.addControls({
+            position: 'topright',
+            drawMarker: false,
+            drawCircle: false,
+            drawCircleMarker: false,
+            drawPolyline: false,
+            drawRectangle: true,
+            drawPolygon: true,
+            editMode: true,
+            dragMode: false,
+            cutPolygon: false,
+            removalMode: true,
+            rotateMode: false,
+        });
+
+        map.pm.setGlobalOptions({
+            snappable: true,
+            snapDistance: 10,
+        });
+
+        // If there's a saved polygon, load it
+        if (existingPolygon?.coordinates) {
+            // Convert GeoJSON [lng, lat] → Leaflet [lat, lng]
+            const latlngs = existingPolygon.coordinates[0].map(([lng, lat]) => [lat, lng]);
+            const layer = L.polygon(latlngs, {
+                color: '#D11243',
+                fillColor: '#D11243',
+                fillOpacity: 0.15,
+                weight: 2,
+            }).addTo(map);
+            layer.pm.enable();
+            polygonLayerRef.current = layer;
+        }
+
+        // Capture newly drawn shapes
+        map.on('pm:create', (e) => {
+            // Remove previous polygon if any
+            if (polygonLayerRef.current) {
+                map.removeLayer(polygonLayerRef.current);
+            }
+            polygonLayerRef.current = e.layer;
+            e.layer.setStyle({ color: '#D11243', fillColor: '#D11243', fillOpacity: 0.15, weight: 2 });
+            emitPolygon(e.layer);
+        });
+
+        // Capture edits
+        map.on('pm:edit', (e) => {
+            if (e.layer === polygonLayerRef.current) emitPolygon(e.layer);
+        });
+
+        // Capture removal
+        map.on('pm:remove', () => {
+            polygonLayerRef.current = null;
+            onPolygonChange(null); // revert to radius-based
+        });
+
+        function emitPolygon(layer) {
+            const latlngs = layer.getLatLngs()[0];
+            const coords = latlngs.map(p => [p.lng, p.lat]);
+            // Close ring
+            coords.push(coords[0]);
+            onPolygonChange({ type: 'Polygon', coordinates: [coords] });
+        }
+
+        return () => {
+            map.pm.removeControls();
+            map.off('pm:create');
+            map.off('pm:edit');
+            map.off('pm:remove');
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Clicking map moves store center
+    useMapEvents({
+        contextmenu(e) {
+            onCenterMove(e.latlng.lat, e.latlng.lng);
+        },
+    });
+
+    return (
+        <Marker
+            position={[lat, lng]}
+            icon={storeIcon}
+            draggable={true}
+            ref={markerRef}
+            eventHandlers={{
+                dragend() {
+                    const m = markerRef.current;
+                    if (m) {
+                        const { lat, lng } = m.getLatLng();
+                        onCenterMove(lat, lng);
+                    }
+                },
+            }}
+        />
+    );
+}
+
 export default function StoreManagement() {
     const [stores, setStores] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -50,102 +203,9 @@ export default function StoreManagement() {
     const [isEditing, setIsEditing] = useState(null);
     const [showForm, setShowForm] = useState(false);
     const [formData, setFormData] = useState(DEFAULT_FORM);
-    const mapRef = useRef(null);
-    const markerRef = useRef(null);
-    const circleRef = useRef(null);
-
-    // Load Google Maps API dynamically if not already loaded
-    useEffect(() => {
-        if (window.google?.maps || document.getElementById('google-maps-script')) return;
-        const apiKey = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
-        if (!apiKey) {
-            console.warn('No Google Maps API key found — map will not load');
-            return;
-        }
-        const script = document.createElement('script');
-        script.id = 'google-maps-script';
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
-        script.async = true;
-        script.defer = true;
-        document.head.appendChild(script);
-    }, []);
-
-    // Sync map when form opens or coords/radius change
-    useEffect(() => {
-        if (!showForm) return;
-
-        // Wait for Google Maps to finish loading
-        const tryInit = () => {
-            if (!window.google?.maps) return;
-
-            const container = document.getElementById('store-map');
-            if (!container) return;
-
-            const center = { lat: parseFloat(formData.lat), lng: parseFloat(formData.lng) };
-
-            if (!mapRef.current) {
-                mapRef.current = new window.google.maps.Map(container, {
-                    center,
-                    zoom: 13,
-                    mapTypeControl: false,
-                    streetViewControl: false,
-                    fullscreenControl: false,
-                });
-
-                markerRef.current = new window.google.maps.Marker({
-                    position: center,
-                    map: mapRef.current,
-                    draggable: true,
-                    title: 'Store Location'
-                });
-
-                circleRef.current = new window.google.maps.Circle({
-                    strokeColor: '#3B82F6',
-                    strokeOpacity: 0.8,
-                    strokeWeight: 2,
-                    fillColor: '#3B82F6',
-                    fillOpacity: 0.1,
-                    map: mapRef.current,
-                    center,
-                    radius: formData.radiusKm * 1000,
-                });
-
-                // Update coords on marker drag
-                markerRef.current.addListener('dragend', () => {
-                    const pos = markerRef.current.getPosition();
-                    setFormData(prev => ({ ...prev, lat: pos.lat(), lng: pos.lng() }));
-                });
-            } else {
-                // Update existing components
-                mapRef.current.setCenter(center);
-                markerRef.current.setPosition(center);
-                circleRef.current.setCenter(center);
-                circleRef.current.setRadius(formData.radiusKm * 1000);
-            }
-        };
-
-        // Retry until Google Maps is loaded (script may still be loading)
-        const interval = setInterval(() => {
-            if (window.google?.maps) {
-                clearInterval(interval);
-                tryInit();
-            }
-        }, 200);
-
-        // Also try immediately
-        setTimeout(tryInit, 100);
-
-        return () => clearInterval(interval);
-    }, [showForm, formData.lat, formData.lng, formData.radiusKm]);
-
-    // Reset map refs on close
-    useEffect(() => {
-        if (!showForm) {
-            mapRef.current = null;
-            markerRef.current = null;
-            circleRef.current = null;
-        }
-    }, [showForm]);
+    // Stores the custom-drawn polygon (GeoJSON). null = use circle auto-gen
+    const [customPolygon, setCustomPolygon] = useState(null);
+    const [existingPolygon, setExistingPolygon] = useState(null);
 
     useEffect(() => { fetchStores(); }, []);
 
@@ -161,7 +221,6 @@ export default function StoreManagement() {
     };
 
     const handleEdit = (store) => {
-        // Extract lat/lng from existing location point
         const [lng, lat] = store.location?.coordinates || [81.804, 17.0005];
         setFormData({
             name: store.name || '',
@@ -175,6 +234,9 @@ export default function StoreManagement() {
             isOpen: store.isOpen ?? true,
             isActive: store.isActive ?? true,
         });
+        // Load existing service area polygon if it exists
+        setExistingPolygon(store.serviceArea || null);
+        setCustomPolygon(null);
         setIsEditing(store._id);
         setShowForm(true);
     };
@@ -198,12 +260,8 @@ export default function StoreManagement() {
                 servicePincodes: formData.servicePincodes
                     ? formData.servicePincodes.split(',').map(p => p.trim()).filter(Boolean)
                     : [],
-                location: {
-                    type: 'Point',
-                    coordinates: [lng, lat],
-                },
-                // Auto-generate the GeoJSON polygon from center + radius
-                serviceArea: buildServiceAreaPolygon(lat, lng, radiusKm),
+                location: { type: 'Point', coordinates: [lng, lat] },
+                serviceArea: customPolygon || buildCirclePolygon(lat, lng, radiusKm),
             };
 
             if (isEditing) {
@@ -216,6 +274,8 @@ export default function StoreManagement() {
             setShowForm(false);
             setIsEditing(null);
             setFormData(DEFAULT_FORM);
+            setCustomPolygon(null);
+            setExistingPolygon(null);
             fetchStores();
         } catch (err) {
             toast.error(err?.response?.data?.message || 'Failed to save store');
@@ -259,10 +319,10 @@ export default function StoreManagement() {
             <div className="flex justify-between items-center">
                 <div>
                     <h2 className="text-xl font-bold text-brand-dark">Store Locations</h2>
-                    <p className="text-xs text-brand-muted mt-0.5">Manage store geo-fences and service areas</p>
+                    <p className="text-xs text-brand-muted mt-0.5">Draw a polygon on the map to define your exact delivery zone</p>
                 </div>
                 <button
-                    onClick={() => { setFormData(DEFAULT_FORM); setIsEditing(null); setShowForm(true); }}
+                    onClick={() => { setFormData(DEFAULT_FORM); setIsEditing(null); setCustomPolygon(null); setExistingPolygon(null); setShowForm(true); }}
                     className="bg-brand-red text-white px-4 py-2.5 rounded-xl flex items-center gap-2 font-bold text-sm hover:bg-red-700 transition-all"
                 >
                     <Plus size={18} /> Add Store
@@ -277,12 +337,14 @@ export default function StoreManagement() {
                             initial={{ opacity: 0, y: 20, scale: 0.97 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 20, scale: 0.97 }}
-                            className="bg-white rounded-3xl p-8 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto"
+                            className="bg-white rounded-3xl p-8 w-full max-w-2xl shadow-2xl max-h-[92vh] overflow-y-auto"
                         >
                             <div className="flex justify-between items-center mb-6">
                                 <div>
                                     <h3 className="text-xl font-bold">{isEditing ? 'Edit Store' : 'New Store'}</h3>
-                                    <p className="text-xs text-gray-400 mt-0.5">Service area is auto-generated from center + radius</p>
+                                    <p className="text-xs text-gray-400 mt-0.5">
+                                        Draw a polygon for custom delivery zone, or use the radius slider
+                                    </p>
                                 </div>
                                 <button onClick={() => setShowForm(false)} className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-all">
                                     <X size={18} />
@@ -297,31 +359,81 @@ export default function StoreManagement() {
                                     {field('Phone', 'phone', 'tel', { placeholder: '9876543210' })}
                                 </div>
 
-                                {/* Geo-fence section */}
-                                <div className="bg-blue-50 rounded-2xl p-6 space-y-4">
-                                    <div className="flex items-center justify-between mb-1">
+                                {/* Geo-fence / Map section */}
+                                <div className="bg-blue-50 rounded-2xl p-5 space-y-4">
+                                    <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                            <Navigation size={14} className="text-blue-500" />
-                                            <p className="text-xs font-bold text-blue-700 uppercase tracking-widest">Geo-fence (Service Area)</p>
+                                            <Hexagon size={14} className="text-blue-500" />
+                                            <p className="text-xs font-bold text-blue-700 uppercase tracking-widest">Delivery Zone</p>
                                         </div>
-                                        <span className="text-[10px] font-bold text-blue-500 bg-blue-100 px-2 py-0.5 rounded-full">
-                                            {formData.radiusKm} km radius
-                                        </span>
-                                    </div>
-
-                                    {/* Map Container */}
-                                    <div className="relative w-full h-48 bg-gray-200 rounded-xl overflow-hidden shadow-inner border border-blue-100">
-                                        <div id="store-map" className="w-full h-full" />
-                                        <div className="absolute top-2 right-2 bg-white/90 backdrop-blur shadow-sm p-2 rounded-lg text-[10px] font-bold text-blue-600">
-                                            Drag center to move store
+                                        <div className="flex gap-2 items-center">
+                                            {customPolygon ? (
+                                                <span className="text-[10px] font-bold text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full">Custom Polygon ✓</span>
+                                            ) : (
+                                                <span className="text-[10px] font-bold text-blue-500 bg-blue-100 px-2 py-0.5 rounded-full">{formData.radiusKm} km radius</span>
+                                            )}
                                         </div>
                                     </div>
 
+                                    {/* Instructions */}
+                                    <div className="bg-white/70 rounded-xl px-4 py-2.5 text-[10px] font-semibold text-blue-700 space-y-0.5">
+                                        <p>🔴 Drag red marker to move store center</p>
+                                        <p>⬡ Click the polygon/rectangle tool (top-right) to draw delivery zone</p>
+                                        <p>✏️ Click edit tool to adjust polygon vertices</p>
+                                        <p>🗑️ Remove tool to delete and revert to radius circle</p>
+                                        <p>Right-click map to also reposition store center</p>
+                                    </div>
+
+                                    {/* Leaflet Map */}
+                                    <div className="rounded-xl overflow-hidden border border-blue-100 shadow-inner" style={{ height: 320 }}>
+                                        {showForm && (
+                                            <MapContainer
+                                                center={[formData.lat, formData.lng]}
+                                                zoom={13}
+                                                style={{ height: '100%', width: '100%' }}
+                                                scrollWheelZoom={true}
+                                            >
+                                                <TileLayer
+                                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                                    attribution='&copy; <a href="https://openstreetmap.org">OpenStreetMap</a>'
+                                                />
+                                                <StoreMapEditor
+                                                    lat={parseFloat(formData.lat)}
+                                                    lng={parseFloat(formData.lng)}
+                                                    radiusKm={parseFloat(formData.radiusKm)}
+                                                    onCenterMove={(lat, lng) => setFormData(prev => ({ ...prev, lat, lng }))}
+                                                    onPolygonChange={setCustomPolygon}
+                                                    existingPolygon={existingPolygon}
+                                                />
+                                            </MapContainer>
+                                        )}
+                                    </div>
+
+                                    {/* Lat/Lng + Radius controls */}
                                     <div className="grid grid-cols-2 gap-3">
                                         {field('Latitude', 'lat', 'number', { step: '0.0001', placeholder: '17.0005' })}
                                         {field('Longitude', 'lng', 'number', { step: '0.0001', placeholder: '81.804' })}
                                     </div>
-                                    {field('Service Radius (km)', 'radiusKm', 'number', { min: 0.5, max: 50, step: 0.5, placeholder: '6' })}
+
+                                    {/* Radius slider */}
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-widest">
+                                            Circle Radius — {formData.radiusKm} km
+                                            <span className="text-[9px] font-normal text-gray-400 ml-2">(used only if no polygon is drawn)</span>
+                                        </label>
+                                        <input
+                                            type="range"
+                                            min={0.5}
+                                            max={30}
+                                            step={0.5}
+                                            value={formData.radiusKm}
+                                            onChange={e => setFormData(prev => ({ ...prev, radiusKm: parseFloat(e.target.value) }))}
+                                            className="w-full accent-blue-500"
+                                        />
+                                        <div className="flex justify-between text-[9px] text-gray-400 font-bold mt-1">
+                                            <span>0.5 km</span><span>30 km</span>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {field('Service Pincodes (comma-separated)', 'servicePincodes', 'text', { placeholder: '533101,533103,533104' })}
@@ -370,7 +482,7 @@ export default function StoreManagement() {
                                             {store.serviceRadiusKm ? ` · ${store.serviceRadiusKm} km radius` : ''}
                                         </span>
                                     </div>
-                                    <div className="flex gap-2 mt-2">
+                                    <div className="flex gap-2 mt-2 flex-wrap">
                                         <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${store.isOpen ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                                             {store.isOpen ? 'Open' : 'Closed'}
                                         </span>

@@ -96,6 +96,9 @@ app.use('/api/ratings', require('./routes/ratingRoutes'));
 // WhatsApp Webhook Routes
 app.use('/api/whatsapp', require('./routes/whatsappRoutes'));
 
+// Image Upload Routes (Cloudinary)
+app.use('/api/upload', require('./routes/uploadRoutes'));
+
 
 // --------------- Error Handler ---------------
 app.use(require('./middleware/errorMiddleware'));
