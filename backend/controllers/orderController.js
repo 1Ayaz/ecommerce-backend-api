@@ -117,6 +117,67 @@ const assignDriver = asyncHandler(async (req, res) => {
     res.status(200).json({ success: true, data: order });
 });
 
+
+// @desc    Book a Rapido parcel for an accepted order
+// @route   POST /api/orders/:id/book-rapido
+// @access  Private (Vendor or Admin)
+const bookRapido = asyncHandler(async (req, res) => {
+    const rapidoService = require('../services/rapidoService');
+    const order = await Order.findById(req.params.id).populate('vendorId', 'location address name').populate('customerId', 'name phone');
+    if (!order) { res.status(404); throw new Error('Order not found'); }
+    if (!['accepted', 'preparing'].includes(order.status)) {
+        res.status(400); throw new Error('Order must be accepted/preparing to book Rapido');
+    }
+    if (order.deliveryProvider === 'rapido' && order.rapido?.orderId) {
+        res.status(400); throw new Error('Rapido already booked for this order');
+    }
+
+    const store = order.vendorId;
+    const pickup = {
+        lat: store?.location?.coordinates?.[1] || 0,
+        lng: store?.location?.coordinates?.[0] || 0,
+        address: store?.address || '',
+        name: store?.name || 'The Fresh Cuts',
+    };
+    const drop = {
+        lat: order.deliveryAddress?.location?.lat || 0,
+        lng: order.deliveryAddress?.location?.lng || 0,
+        address: order.deliveryAddress?.fullAddress || '',
+        name: order.customerId?.name || 'Customer',
+        phone: order.customerId?.phone || '',
+    };
+
+    const result = await rapidoService.createRapidoOrder({ pickup, drop, orderId: order._id, weight: 1 });
+
+    order.deliveryProvider = 'rapido';
+    order.rapido = {
+        orderId: result.rapidoOrderId,
+        trackingUrl: result.trackingUrl,
+        fare: result.estimatedFare,
+        status: 'searching',
+        bookedAt: new Date(),
+    };
+    if (order.status === 'accepted') {
+        order.status = 'assigned';
+        order.statusTimeline.push({ status: 'assigned', message: 'Rapido captain being assigned' });
+    }
+    await order.save();
+    res.json({ success: true, data: { rapido: order.rapido } });
+});
+
+// @desc    Get Rapido status for an order
+// @route   GET /api/orders/:id/rapido-status
+// @access  Private (Vendor or Admin)
+const getRapidoStatus = asyncHandler(async (req, res) => {
+    const rapidoService = require('../services/rapidoService');
+    const order = await Order.findById(req.params.id);
+    if (!order || !order.rapido?.orderId) { res.status(404); throw new Error('No Rapido booking found for this order'); }
+
+    const status = await rapidoService.getRapidoStatus(order.rapido.orderId);
+    order.rapido.status = status.status?.toLowerCase() || order.rapido.status;
+    await order.save();
+    res.json({ success: true, data: status });
+});
 module.exports = {
     placeOrder,
     getAllOrders,
@@ -126,4 +187,6 @@ module.exports = {
     getVendorOrders,
     assignDriver,
     previewOrder,
+    bookRapido,
+    getRapidoStatus,
 };

@@ -80,6 +80,37 @@ const orderSchema = new mongoose.Schema(
             type: String,
             default: '',
         },
+
+        // Delivery mode: instant (asap) or scheduled (time slot)
+        deliveryMode: {
+            type: String,
+            enum: ['instant', 'scheduled'],
+            default: 'instant',
+        },
+        scheduledSlot: {
+            label: String,
+            fromTime: String,
+            toTime: String,
+            date: Date,
+        },
+
+        // Delivery provider: internal driver or Rapido
+        deliveryProvider: {
+            type: String,
+            enum: ['internal', 'rapido'],
+            default: 'internal',
+        },
+        rapido: {
+            orderId: String,
+            trackingUrl: String,
+            fare: Number,
+            status: { type: String, default: 'pending' },
+            bookedAt: Date,
+        },
+
+        // Gated community support
+        gateCode: { type: String, default: '' },
+
         statusTimeline: [
             {
                 status: { type: String, required: true },
@@ -112,4 +143,3 @@ orderSchema.index({ status: 1 });
 orderSchema.index({ driverId: 1 });
 
 module.exports = mongoose.model('Order', orderSchema);
-

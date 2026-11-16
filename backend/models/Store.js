@@ -1,5 +1,14 @@
 const mongoose = require('mongoose');
 
+const deliverySlotSchema = new mongoose.Schema({
+    label: { type: String, required: true },       // e.g. "Morning Slot"
+    fromTime: { type: String, required: true },     // "09:00"
+    toTime: { type: String, required: true },       // "11:00"
+    days: { type: [Number], default: [0,1,2,3,4,5,6] }, // 0=Sun..6=Sat
+    maxOrders: { type: Number, default: 20 },
+    isActive: { type: Boolean, default: true },
+}, { _id: false });
+
 const deliverySlabSchema = new mongoose.Schema({
     fromKm: { type: Number, required: true },
     toKm: { type: Number, required: true },
@@ -96,7 +105,18 @@ const storeSchema = new mongoose.Schema(
         commissionPercentage: {
             type: Number,
             default: null  // null = use global setting
-        }
+        },
+
+        deliveryModes: {
+            instant: {
+                enabled: { type: Boolean, default: true },
+                etaMinutes: { type: Number, default: 30 },
+            },
+            scheduled: {
+                enabled: { type: Boolean, default: false },
+                slots: { type: [deliverySlotSchema], default: [] },
+            },
+        },
     },
     { timestamps: true }
 );

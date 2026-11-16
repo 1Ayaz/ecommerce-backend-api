@@ -7,7 +7,8 @@ const {
     createStore,
     updateStore,
     deleteStore,
-    updateDeliveryConfig
+    updateDeliveryConfig,
+    updateDeliveryModes,
 } = require('../controllers/storeController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 const { restrictToOwnVendor } = require('../middleware/storeMiddleware');
@@ -31,6 +32,9 @@ router.put('/:id/commission', protect, authorize('admin'), validateMongoId, asyn
 
 // Vendor delivery pricing config
 router.put('/:id/delivery-config', protect, authorize('admin', 'vendor'), updateDeliveryConfig);
+
+// Vendor delivery modes (instant/scheduled slots)
+router.put('/:id/delivery-modes', protect, authorize('admin', 'vendor'), updateDeliveryModes);
 
 router.put('/:id', protect, authorize('admin', 'vendor'), restrictToOwnVendor, validateMongoId, validateStore, updateStore);
 router.delete('/:id', protect, authorize('admin'), validateMongoId, deleteStore);

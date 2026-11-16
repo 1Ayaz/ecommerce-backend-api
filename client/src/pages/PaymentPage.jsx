@@ -75,7 +75,7 @@ export default function PaymentPage() {
         );
     }
 
-    const { vendorId, items, deliveryAddress, specialInstructions, couponCode, grandTotal } = state;
+    const { vendorId, items, deliveryAddress, specialInstructions, couponCode, grandTotal, deliveryMode, scheduledSlot } = state;
 
     const handlePlaceOrder = async () => {
         try {
@@ -123,6 +123,8 @@ export default function PaymentPage() {
                 expectedTotal: grandTotal,
                 specialInstructions: specialInstructions || '',
                 couponCode: couponCode || null,
+                deliveryMode: deliveryMode || 'instant',
+                scheduledSlot: scheduledSlot || null,
             };
 
             const { data } = await API.post('/orders', orderData);

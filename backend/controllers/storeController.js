@@ -158,6 +158,25 @@ const updateDeliveryConfig = asyncHandler(async (req, res) => {
     res.status(200).json({ success: true, data: store.deliveryConfig });
 });
 
+// @desc    Update store delivery modes (instant + scheduled slots)
+// @route   PUT /api/stores/:id/delivery-modes
+// @access  Private (Vendor or Admin)
+const updateDeliveryModes = asyncHandler(async (req, res) => {
+    const store = await Store.findById(req.params.id);
+    if (!store) { res.status(404); throw new Error('Store not found'); }
+
+    if (req.user.role === 'vendor' && req.user.vendorId?.toString() !== req.params.id) {
+        res.status(403); throw new Error('Not authorized');
+    }
+
+    const { instant, scheduled } = req.body;
+    if (instant !== undefined) store.deliveryModes.instant = { ...store.deliveryModes.instant, ...instant };
+    if (scheduled !== undefined) store.deliveryModes.scheduled = { ...store.deliveryModes.scheduled, ...scheduled };
+
+    await store.save();
+    res.json({ success: true, data: store.deliveryModes });
+});
+
 module.exports = {
     getNearbyStore,
     getStoreById,
@@ -165,5 +184,6 @@ module.exports = {
     createStore,
     updateStore,
     deleteStore,
-    updateDeliveryConfig
+    updateDeliveryConfig,
+    updateDeliveryModes,
 };

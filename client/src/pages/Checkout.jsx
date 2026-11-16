@@ -40,6 +40,11 @@ export default function Checkout() {
     const [previewLoading, setPreviewLoading] = useState(false);
     const [financialSnapshot, setFinancialSnapshot] = useState(null);
 
+    // Delivery mode & slot state
+    const [selectedDeliveryMode, setSelectedDeliveryMode] = useState('instant');
+    const [selectedSlot, setSelectedSlot] = useState(null);
+    const [storeDeliveryModes, setStoreDeliveryModes] = useState(null);
+
     // ─── Gate: show login sheet if guest tries to checkout ───
     useEffect(() => {
         if (!user && items.length > 0) setShowLogin(true);
@@ -98,6 +103,14 @@ export default function Checkout() {
     const handlingFee  = (financialSnapshot?.platformFee ?? 0) + (financialSnapshot?.taxAmount ?? 0);
     const grandTotal   = financialSnapshot?.grandTotal   ?? (subtotal - discount + deliveryFee + handlingFee);
 
+    // ─── Fetch store delivery modes ───
+    useEffect(() => {
+        if (!vendorId) return;
+        API.get(`/stores/${vendorId}`)
+            .then(res => setStoreDeliveryModes(res.data?.data?.deliveryModes || null))
+            .catch(() => {}); // fail silently — instant is default
+    }, [vendorId]);
+
     // ─── Navigate to payment page ───
     const handleMakePayment = () => {
         if (!user) {
@@ -127,6 +140,8 @@ export default function Checkout() {
                 specialInstructions,
                 couponCode: appliedCoupon?.couponCode || null,
                 subtotal, discount, deliveryFee, handlingFee, grandTotal,
+                deliveryMode: selectedDeliveryMode,
+                scheduledSlot: selectedDeliveryMode === 'scheduled' ? selectedSlot : null,
             }
         });
     };
@@ -251,6 +266,87 @@ export default function Checkout() {
                         className="w-full bg-gray-50 rounded-xl px-3 py-2.5 text-xs font-medium text-secondary border border-gray-100 focus:ring-1 focus:ring-[#D11243]/10 outline-none"
                     />
                 </section>
+
+                {/* ─── Delivery Mode ─── */}
+                {(() => {
+                    if (!storeDeliveryModes) return null;
+                    const now = new Date();
+                    const todayIdx = now.getDay(); // 0=Sun..6=Sat
+                    const nowMins = now.getHours() * 60 + now.getMinutes();
+                    const toMins = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+
+                    const instantAvail = storeDeliveryModes.instant?.enabled;
+                    const availableSlots = (storeDeliveryModes.scheduled?.enabled
+                        ? (storeDeliveryModes.scheduled.slots || [])
+                        : []
+                    ).filter(s =>
+                        s.isActive &&
+                        (s.days || [0,1,2,3,4,5,6]).includes(todayIdx) &&
+                        toMins(s.toTime) > nowMins   // slot hasn't ended yet today
+                    );
+
+                    if (!instantAvail && availableSlots.length === 0) {
+                        return (
+                            <section className="bg-orange-50 rounded-2xl p-4 border border-orange-100">
+                                <p className="text-xs font-bold text-orange-600">⏳ No delivery slots available right now. Please check back later.</p>
+                            </section>
+                        );
+                    }
+
+                    // Auto-select if only one option
+                    if (instantAvail && availableSlots.length === 0 && selectedDeliveryMode !== 'instant') {
+                        setSelectedDeliveryMode('instant'); setSelectedSlot(null);
+                    }
+                    if (!instantAvail && availableSlots.length > 0 && selectedDeliveryMode !== 'scheduled') {
+                        setSelectedDeliveryMode('scheduled');
+                    }
+
+                    const showToggle = instantAvail && availableSlots.length > 0;
+
+                    return (
+                        <section className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Delivery Type</p>
+                            {showToggle && (
+                                <div className="flex gap-2 mb-3">
+                                    <button
+                                        onClick={() => { setSelectedDeliveryMode('instant'); setSelectedSlot(null); }}
+                                        className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition-all ${selectedDeliveryMode === 'instant' ? 'bg-[#D11243] text-white border-[#D11243]' : 'bg-gray-50 text-slate-500 border-gray-100'}`}
+                                    >
+                                        ⚡ Instant ({storeDeliveryModes.instant.etaMinutes || 30} min)
+                                    </button>
+                                    <button
+                                        onClick={() => setSelectedDeliveryMode('scheduled')}
+                                        className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition-all ${selectedDeliveryMode === 'scheduled' ? 'bg-[#D11243] text-white border-[#D11243]' : 'bg-gray-50 text-slate-500 border-gray-100'}`}
+                                    >
+                                        🕐 Schedule
+                                    </button>
+                                </div>
+                            )}
+                            {!showToggle && instantAvail && (
+                                <div className="flex items-center gap-2 py-1 mb-2">
+                                    <span className="text-sm font-bold text-secondary">⚡ Instant Delivery</span>
+                                    <span className="text-xs text-slate-400">{storeDeliveryModes.instant.etaMinutes || 30} min</span>
+                                </div>
+                            )}
+                            {(selectedDeliveryMode === 'scheduled' || (!instantAvail && availableSlots.length > 0)) && (
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Available slots today</p>
+                                    {availableSlots.map((slot, i) => (
+                                        <button key={i}
+                                            onClick={() => setSelectedSlot(slot)}
+                                            className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${selectedSlot?.label === slot.label ? 'bg-red-50 border-[#D11243] text-[#D11243]' : 'bg-gray-50 border-gray-100 text-slate-600'}`}
+                                        >
+                                            {slot.label} · {slot.fromTime} – {slot.toTime}
+                                        </button>
+                                    ))}
+                                    {availableSlots.length === 0 && (
+                                        <p className="text-xs text-orange-500 font-medium">No more slots available today.</p>
+                                    )}
+                                </div>
+                            )}
+                        </section>
+                    );
+                })()}
 
                 {/* ─── Coupon ─── */}
                 <CouponInput

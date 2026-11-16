@@ -9,6 +9,8 @@ const {
     getVendorOrders,
     assignDriver,
     previewOrder,
+    bookRapido,
+    getRapidoStatus,
 } = require('../controllers/orderController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 const { restrictToOwnVendor } = require('../middleware/storeMiddleware');
@@ -30,5 +32,9 @@ router.get('/history', protect, getOrderHistory);
 router.get('/:id', protect, validateMongoId, getOrderById);
 router.put('/:id/status', protect, authorize('vendor', 'admin'), validateMongoId, validateOrderStatus, updateOrderStatus);
 router.put('/:id/assign-driver', protect, authorize('vendor'), restrictToOwnVendor, validateMongoId, assignDriver);
+
+// Rapido parcel booking
+router.post('/:id/book-rapido', protect, authorize('admin', 'vendor'), bookRapido);
+router.get('/:id/rapido-status', protect, authorize('admin', 'vendor'), getRapidoStatus);
 
 module.exports = router;
