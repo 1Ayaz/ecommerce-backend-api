@@ -106,6 +106,9 @@ const orderSchema = new mongoose.Schema(
             fare: Number,
             status: { type: String, default: 'pending' },
             bookedAt: Date,
+            pickupOtp: String,
+            captainName: String,
+            captainPhone: String,
         },
 
         // Gated community support

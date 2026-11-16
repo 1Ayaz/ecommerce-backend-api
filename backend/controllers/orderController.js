@@ -156,6 +156,9 @@ const bookRapido = asyncHandler(async (req, res) => {
         fare: result.estimatedFare,
         status: 'searching',
         bookedAt: new Date(),
+        pickupOtp: result.pickupOtp || null,     // shown to vendor; captain must say this at pickup
+        captainName: result.captain?.name || null,
+        captainPhone: result.captain?.phone || null,
     };
     if (order.status === 'accepted') {
         order.status = 'assigned';

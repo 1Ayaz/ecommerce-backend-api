@@ -21,11 +21,11 @@ const CLIENT_SECRET = process.env.RAPIDO_CLIENT_SECRET;
 let _cachedToken = null;
 let _tokenExpiry = 0;
 
+const isStubMode = !CLIENT_ID || !CLIENT_SECRET;
+
 async function getAccessToken() {
+    if (isStubMode) return 'stub_token';
     if (_cachedToken && Date.now() < _tokenExpiry) return _cachedToken;
-    if (!CLIENT_ID || !CLIENT_SECRET) {
-        throw new Error('Rapido credentials not configured. Add RAPIDO_CLIENT_ID and RAPIDO_CLIENT_SECRET to .env');
-    }
     const res = await axios.post(`${BASE_URL}/oauth/token`, {
         client_id: CLIENT_ID,
         client_secret: CLIENT_SECRET,
@@ -46,6 +46,18 @@ async function getAccessToken() {
  * @returns {{ rapidoOrderId, trackingUrl, estimatedFare, captain }}
  */
 async function createRapidoOrder({ pickup, drop, orderId, weight = 1 }) {
+    // ── Stub mode (no credentials) ──
+    if (isStubMode) {
+        const stubOtp = String(Math.floor(1000 + Math.random() * 9000));
+        return {
+            rapidoOrderId: `RPDO_STUB_${orderId}`,
+            trackingUrl: `https://track.rapido.bike/stub/${orderId}`,
+            estimatedFare: 49,
+            captain: null,
+            pickupOtp: stubOtp,  // vendor shows this to the arriving captain
+        };
+    }
+
     const token = await getAccessToken();
     const payload = {
         pickup_details: {
@@ -79,6 +91,7 @@ async function createRapidoOrder({ pickup, drop, orderId, weight = 1 }) {
         trackingUrl: res.data.tracking_url || `https://rapido.bike/track/${res.data.order_id}`,
         estimatedFare: res.data.estimated_fare || 0,
         captain: res.data.captain || null,
+        pickupOtp: res.data.pickup_otp || res.data.otp || null,  // 4-digit OTP for captain verification at pickup
     };
 }
 
@@ -86,6 +99,9 @@ async function createRapidoOrder({ pickup, drop, orderId, weight = 1 }) {
  * Get real-time status of a Rapido order
  */
 async function getRapidoStatus(rapidoOrderId) {
+    if (isStubMode || rapidoOrderId.startsWith('RPDO_STUB_')) {
+        return { status: 'SEARCHING', captain: null, trackingUrl: null, currentLocation: null };
+    }
     const token = await getAccessToken();
     const res = await axios.get(`${BASE_URL}/v1/orders/${rapidoOrderId}`, {
         headers: { Authorization: `Bearer ${token}` },
