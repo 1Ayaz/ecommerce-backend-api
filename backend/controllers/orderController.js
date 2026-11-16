@@ -84,7 +84,11 @@ const getOrderById = asyncHandler(async (req, res) => {
         throw new Error('Not authorized to view this order');
     }
 
-    res.status(200).json({ success: true, data: order });
+    const orderObj = order.toObject();
+    if (req.user.role === 'customer' && orderObj.rapido) {
+        delete orderObj.rapido.pickupOtp;
+    }
+    res.status(200).json({ success: true, data: orderObj });
 });
 
 // @desc    Update order status (vendor/admin)
@@ -114,7 +118,11 @@ const assignDriver = asyncHandler(async (req, res) => {
         req.body.driverId,
         req.user
     );
-    res.status(200).json({ success: true, data: order });
+    const orderObj = order.toObject();
+    if (req.user.role === 'customer' && orderObj.rapido) {
+        delete orderObj.rapido.pickupOtp;
+    }
+    res.status(200).json({ success: true, data: orderObj });
 });
 
 
@@ -159,6 +167,7 @@ const bookRapido = asyncHandler(async (req, res) => {
         pickupOtp: result.pickupOtp || null,     // shown to vendor; captain must say this at pickup
         captainName: result.captain?.name || null,
         captainPhone: result.captain?.phone || null,
+        deliveryOtp: result.deliveryOtp || null,  // shown to customer; captain asks for this at delivery
     };
     if (order.status === 'accepted') {
         order.status = 'assigned';

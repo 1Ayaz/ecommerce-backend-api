@@ -49,12 +49,14 @@ async function createRapidoOrder({ pickup, drop, orderId, weight = 1 }) {
     // ── Stub mode (no credentials) ──
     if (isStubMode) {
         const stubOtp = String(Math.floor(1000 + Math.random() * 9000));
+        const stubDeliveryOtp = String(Math.floor(1000 + Math.random() * 9000));
         return {
             rapidoOrderId: `RPDO_STUB_${orderId}`,
             trackingUrl: `https://track.rapido.bike/stub/${orderId}`,
             estimatedFare: 49,
             captain: null,
-            pickupOtp: stubOtp,  // vendor shows this to the arriving captain
+            pickupOtp: stubOtp,          // vendor shows this → captain says it at pickup
+            deliveryOtp: stubDeliveryOtp, // customer shows this → captain asks for it at delivery
         };
     }
 
@@ -92,6 +94,7 @@ async function createRapidoOrder({ pickup, drop, orderId, weight = 1 }) {
         estimatedFare: res.data.estimated_fare || 0,
         captain: res.data.captain || null,
         pickupOtp: res.data.pickup_otp || res.data.otp || null,  // 4-digit OTP for captain verification at pickup
+        deliveryOtp: res.data.delivery_otp || null,              // sent to customer via SMS; also stored here as backup
     };
 }
 

@@ -345,6 +345,11 @@ export default function CustomerDashboard() {
                                         <p className="text-[11px] text-slate-400">{order.items?.length} item{order.items?.length > 1 ? 's' : ''}</p>
                                     </div>
                                     <div className="flex items-center gap-2">
+                                        {order.deliveryProvider === 'rapido' && order.rapido?.deliveryOtp && (
+                                            <span className="px-2 py-1 bg-amber-100 text-amber-800 rounded-lg text-[10px] font-black tracking-wider">
+                                                OTP: {order.rapido.deliveryOtp}
+                                            </span>
+                                        )}
                                         <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-lg text-[10px] font-black uppercase tracking-wider">
                                             {order.status?.replace(/_/g, ' ')}
                                         </span>

@@ -106,7 +106,8 @@ const orderSchema = new mongoose.Schema(
             fare: Number,
             status: { type: String, default: 'pending' },
             bookedAt: Date,
-            pickupOtp: String,
+            pickupOtp: String,       // vendor shows to captain at pickup
+            deliveryOtp: String,      // customer shows to captain at delivery (also sent via SMS by Rapido)
             captainName: String,
             captainPhone: String,
         },

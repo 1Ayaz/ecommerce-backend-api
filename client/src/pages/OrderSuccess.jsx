@@ -287,21 +287,60 @@ export default function OrderSuccess() {
 
                     {/* Right: Delivery & Support */}
                     <div className="lg:col-span-5 space-y-8">
-                        {/* Delivery PIN Card */}
-                        {order?.customerId?.deliveryPin && (
-                            <section className="bg-red-50 rounded-[2.5rem] p-8 border border-red-100 flex items-center justify-between shadow-sm">
-                                <div>
-                                    <h3 className="text-xs font-bold text-red-500 uppercase tracking-widest mb-1 flex items-center gap-2">
-                                        <ShieldCheck size={14} /> Delivery PIN
-                                    </h3>
-                                    <p className="text-sm text-red-900 font-medium">Provide to driver</p>
+                        {/* Rapido Delivery OTP & Live Tracking Card */}
+                        {order?.deliveryProvider === 'rapido' && order?.rapido ? (
+                            <section className="bg-amber-50 rounded-[2.5rem] p-8 border border-amber-200 shadow-sm space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h3 className="text-xs font-black text-amber-700 uppercase tracking-widest mb-1 flex items-center gap-2">
+                                            <ShieldCheck size={16} /> Rapido Delivery OTP
+                                        </h3>
+                                        <p className="text-sm text-amber-900 font-bold">Tell captain at delivery</p>
+                                    </div>
+                                    <div className="bg-white px-5 py-2.5 rounded-2xl shadow-sm border border-amber-200 text-2xl font-black tracking-widest text-amber-600">
+                                        {order.rapido.deliveryOtp || '----'}
+                                    </div>
                                 </div>
-                                <div className="bg-white px-6 py-3 rounded-2xl shadow-sm border border-red-100 text-2xl font-black tracking-widest text-[#D11243]">
-                                    {order.customerId.deliveryPin}
-                                </div>
+                                <p className="text-xs text-amber-800 leading-relaxed font-medium">
+                                    Your order is being delivered via <strong>Rapido Parcel</strong>. Please share this OTP with the captain upon arrival to receive your package.
+                                </p>
+                                {order.rapido.captainName && (
+                                    <div className="pt-2 border-t border-amber-200/60 flex items-center justify-between text-xs">
+                                        <span className="text-amber-900 font-bold">Captain: {order.rapido.captainName}</span>
+                                        {order.rapido.captainPhone && (
+                                            <a href={`tel:${order.rapido.captainPhone}`} className="text-[#D11243] font-bold underline">
+                                                Call Captain
+                                            </a>
+                                        )}
+                                    </div>
+                                )}
+                                {order.rapido.trackingUrl && (
+                                    <a
+                                        href={order.rapido.trackingUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="w-full py-3.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <Truck size={15} /> Live Track Rapido Captain
+                                    </a>
+                                )}
                             </section>
+                        ) : (
+                            /* In-house Delivery PIN Card */
+                            order?.customerId?.deliveryPin && (
+                                <section className="bg-red-50 rounded-[2.5rem] p-8 border border-red-100 flex items-center justify-between shadow-sm">
+                                    <div>
+                                        <h3 className="text-xs font-bold text-red-500 uppercase tracking-widest mb-1 flex items-center gap-2">
+                                            <ShieldCheck size={14} /> Delivery PIN
+                                        </h3>
+                                        <p className="text-sm text-red-900 font-medium">Provide to driver</p>
+                                    </div>
+                                    <div className="bg-white px-6 py-3 rounded-2xl shadow-sm border border-red-100 text-2xl font-black tracking-widest text-[#D11243]">
+                                        {order.customerId.deliveryPin}
+                                    </div>
+                                </section>
+                            )
                         )}
-
                         {/* Delivery Address */}
                         {order?.deliveryAddress && (
                             <section className="bg-white rounded-[2.5rem] shadow-premium p-8 border border-white">
