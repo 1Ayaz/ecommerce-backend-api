@@ -50,6 +50,37 @@ app.get('/', (req, res) => {
     res.json({ status: 'ok', message: 'The Fresh Cuts API is running 🐔' });
 });
 
+// Health and DB check
+app.get('/health', (req, res) => {
+    const isDbConnected = require('mongoose').connection.readyState === 1;
+    res.json({
+        status: 'ok',
+        database: isDbConnected ? 'connected' : 'disconnected',
+        timestamp: new Date().toISOString()
+    });
+});
+app.get('/api/health', (req, res) => {
+    const isDbConnected = require('mongoose').connection.readyState === 1;
+    res.json({
+        status: 'ok',
+        database: isDbConnected ? 'connected' : 'disconnected',
+        timestamp: new Date().toISOString()
+    });
+});
+
+// Guard API routes if database is not connected
+app.use('/api', (req, res, next) => {
+    if (req.path === '/health') return next();
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState !== 1) {
+        return res.status(503).json({
+            success: false,
+            message: 'Database connection in progress or paused. If using MongoDB Atlas Free Tier, please resume your cluster at cloud.mongodb.com.'
+        });
+    }
+    next();
+});
+
 // Auth Routes
 app.use('/api/auth', authLimiter, require('./routes/authRoutes'));
 
@@ -117,20 +148,27 @@ initSocket(server);
 // Combined Startup Function
 const startServer = async () => {
     try {
-        // 1. Connect to Database first
-        if (process.env.NODE_ENV !== 'test') {
-            await connectDB();
-        }
-
-        // 2. Then start the server
+        // 1. Start HTTP Server immediately so Render port check always succeeds
         if (process.env.NODE_ENV !== 'test') {
             server.listen(PORT, '0.0.0.0', () => {
-                console.log(`🚀 Mubarak API & Real-time Server running on port ${PORT} (0.0.0.0)`);
+                console.log(`🚀 The Fresh Cuts API & Real-time Server running on port ${PORT} (0.0.0.0)`);
             });
         }
+
+        // 2. Connect to Database with background retry loop
+        if (process.env.NODE_ENV !== 'test') {
+            await connectDB();
+            // If connection not established, periodically retry every 15s
+            setInterval(() => {
+                const mongoose = require('mongoose');
+                if (mongoose.connection.readyState === 0) {
+                    console.log('🔄 Retrying MongoDB connection...');
+                    connectDB();
+                }
+            }, 15000);
+        }
     } catch (err) {
-        console.error('❌ Failed to start server:', err.message);
-        process.exit(1);
+        console.error('❌ Server startup error:', err.message);
     }
 };
 

@@ -3,32 +3,25 @@ const mongoose = require('mongoose');
 const connectDB = async () => {
   if (mongoose.connection.readyState >= 1) return;
 
+  const uri = process.env.NODE_ENV === 'test'
+    ? (process.env.MONGO_URI_TEST || 'mongodb://localhost:27017/tfc_test')
+    : process.env.MONGO_URI;
+
+  if (!uri) {
+    console.error('❌ CRITICAL: MONGO_URI is not defined in environment variables!');
+    console.error('Go to Render Dashboard -> Environment and add MONGO_URI.');
+    return;
+  }
+
   try {
-    const uri = process.env.NODE_ENV === 'test'
-      ? (process.env.MONGO_URI_TEST || 'mongodb://localhost:27017/tfc_test')
-      : process.env.MONGO_URI;
-
-    if (!uri) {
-      console.error('❌ CRITICAL: MONGO_URI is not defined in environment variables!');
-      console.error('Go to Render Dashboard -> Environment and add MONGO_URI.');
-      process.exit(1);
-    }
-
     const conn = await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 10000, // 10 second timeout
+      serverSelectionTimeoutMS: 8000,
     });
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error(`❌ MongoDB Connection Error: ${error.message}`);
-    if (error.name === 'MongoParseError') {
-      console.error('Check if your MONGO_URI is formatted correctly in Render Environment Variables.');
-    }
-    if (error.message.includes('ETIMEDOUT') || error.message.includes('ENOTFOUND')) {
-      console.error('Network Error: Check if you have whitelisted 0.0.0.0/0 in MongoDB Atlas.');
-    }
-    
-    if (process.env.NODE_ENV !== 'test') {
-      process.exit(1);
+    if (error.message.includes('ENOTFOUND')) {
+      console.error('🚨 MONGODB ATLAS CLUSTER MAY BE PAUSED: MongoDB Atlas Free M0 clusters auto-pause after inactivity. Please go to cloud.mongodb.com and click Resume on your cluster.');
     }
   }
 };
