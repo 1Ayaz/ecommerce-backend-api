@@ -1,8 +1,9 @@
 {
-  "name": "mubarak-app",
+  "name": "the-fresh-cuts",
   "version": "1.0.0",
-  "description": "Mubarak – Fresh Chicken Delivery (MERN)",
+  "description": "The Fresh Cuts Backend & Quick Commerce",
   "scripts": {
+    "postinstall": "npm install --prefix backend",
     "server": "npm run dev --prefix backend",
     "client": "npm run dev --prefix client",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
@@ -11,18 +12,28 @@
     "seed": "npm run seed --prefix backend"
   },
   "dependencies": {
-    "bcryptjs": "2.4.3",
-    "concurrently": "8.2.2",
-    "cors": "2.8.5",
-    "dotenv": "16.4.1",
-    "express": "4.18.2",
-    "express-async-handler": "1.2.0",
-    "helmet": "7.1.0",
-    "jsonwebtoken": "9.0.2",
-    "mongoose": "8.1.1",
-    "morgan": "1.10.0",
+    "axios": "^1.13.5",
+    "bcryptjs": "^2.4.3",
+    "cloudinary": "^1.41.3",
+    "concurrently": "^8.2.2",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.1",
+    "express": "^4.18.2",
+    "express-async-handler": "^1.2.0",
+    "express-rate-limit": "^8.2.1",
+    "express-validator": "^7.3.1",
     "firebase-admin": "^12.0.0",
-    "cookie-parser": "^1.4.6"
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongodb": "^7.1.0",
+    "mongoose": "^8.1.1",
+    "morgan": "^1.10.0",
+    "multer": "^2.4.0",
+    "multer-storage-cloudinary": "^4.0.0",
+    "socket.io": "^4.8.3",
+    "web-push": "^3.6.7",
+    "winston": "^3.19.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.3"

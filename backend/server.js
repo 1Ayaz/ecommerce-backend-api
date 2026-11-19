@@ -1,4 +1,7 @@
+const path = require('path');
 const dotenv = require('dotenv');
+// Ensure .env is loaded whether run from repo root or backend/ folder
+dotenv.config({ path: path.join(__dirname, '.env') });
 dotenv.config();
 
 const express = require('express');
